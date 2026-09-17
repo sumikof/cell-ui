@@ -204,9 +204,13 @@ check('auto-expand adds a row on Enter at last row', (await page.evaluate(() => 
 // Bare table without headers / bars, toggled at runtime
 check('bare table has no headers or bars', await page.evaluate(() => { const r = document.getElementById('bare').shadowRoot; return !r.querySelector('.cui-toolbar') && !r.querySelector('.cui-formulabar') && !r.querySelector('.cui-statusbar') && getComputedStyle(r.querySelector('.cui-colheader-wrap')).display === 'none'; }));
 const bareVp = await page.evaluateHandle(() => document.getElementById('bare').shadowRoot.querySelector('.cui-viewport'));
-const bareBox = await bareVp.asElement().boundingBox();
-const bareRoot = await page.evaluate(() => { const b = document.getElementById('bare').shadowRoot.querySelector('.cui-grid').getBoundingClientRect(); return { x: b.x, y: b.y }; });
-check('viewport starts at the grid origin without headers', Math.abs(bareBox.x - bareRoot.x) < 1 && Math.abs(bareBox.y - bareRoot.y) < 1, `${bareBox.x - bareRoot.x},${bareBox.y - bareRoot.y}`);
+const bareOffset = await page.evaluate(() => {
+  const r = document.getElementById('bare').shadowRoot;
+  const g = r.querySelector('.cui-grid').getBoundingClientRect();
+  const v = r.querySelector('.cui-viewport').getBoundingClientRect();
+  return { dx: v.x - g.x, dy: v.y - g.y };
+});
+check('viewport starts at the grid origin without headers', Math.abs(bareOffset.dx) < 1 && Math.abs(bareOffset.dy) < 1, `${bareOffset.dx},${bareOffset.dy}`);
 await bareVp.asElement().click({ position: { x: 20, y: 32 } });
 await page.keyboard.type('bare');
 await page.keyboard.press('Enter');
