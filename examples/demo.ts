@@ -1,4 +1,4 @@
-import { Spreadsheet } from '../src';
+import { Spreadsheet, columnRange } from '../src';
 import { formulaPlugin } from './formula-plugin';
 
 const sheet = new Spreadsheet(document.getElementById('app')!, {
@@ -29,6 +29,9 @@ sheet.model.setCell(8, 0, { value: '折り返しテキストのサンプルで�
 sheet.model.setRowHeight(8, 60);
 sheet.model.setColumnWidth(0, 120);
 sheet.model.setColumnWidth(4, 140);
+// 入力規則: B 列は 0 以上の整数のみ、E 列はリストから選択
+sheet.model.setValidation(columnRange(1), { type: 'number', integer: true, min: 0 });
+sheet.model.setValidation({ start: { row: 1, col: 4 }, end: { row: 20, col: 4 } }, { type: 'list', options: ['長野産', '特売', '取り寄せ', ''], allowOther: true });
 sheet.model.clearHistory();
 sheet.focus();
 

@@ -207,6 +207,34 @@ macOS では Ctrl の代わりに ⌘ を使います(`Mod` 修飾子)。
 - 貼り付け先が 1 セルならブロックの大きさで、選択範囲がブロックの整数倍ならタイル状に貼り付けます(Excel と同じ)。
 - 同一アプリ内の貼り付けは内部ペイロードを使うため、プラグインが `meta` に保存したデータ(数式ソースなど)もそのまま移動します。
 
+## 入力規則(データの入力規則)
+
+Excel の「データの入力規則」に相当します。範囲(列全体など)に規則を設定すると、確定時に検証され、違反した入力はエラーメッセージを表示して編集状態のまま拒否されます(Esc で取り消し)。既に入っている値が規則に反する場合は、セル右上に赤いマークが付きます。
+
+```ts
+import { columnRange, rowRange } from 'cell-ui';
+
+// B 列は 0 以上の整数のみ
+sheet.model.setValidation(columnRange(1), { type: 'number', min: 0, integer: true });
+// C2:C100 はリストから選択(セル横の ▾ ボタン / Alt+↓ でドロップダウン)
+sheet.model.setValidation({ start: { row: 1, col: 2 }, end: { row: 99, col: 2 } }, { type: 'list', options: ['通常', '特売', '取り寄せ'] });
+
+sheet.model.setValidation(columnRange(1), null);   // 解除
+sheet.model.getValidation(row, col);               // セルに適用中の規則
+sheet.validate({ row, col }, value);               // エラーメッセージ or null
+sheet.validateAll();                               // 規則違反のセル一覧
+sheet.events.on('validationerror', (e) => …);      // 入力が拒否されたとき
+```
+
+| 規則 | プロパティ |
+| --- | --- |
+| `{ type: 'number' }` | `min` `max` `integer`(整数のみ)`allowBlank`(既定 true)`message`(独自メッセージ) |
+| `{ type: 'list', options: [...] }` | `allowOther`(リスト外の入力も許可、既定 false)`dropdown`(▾ ボタンの表示、既定 true)`allowBlank` `message` |
+
+- `columnRange(col)` / `rowRange(row)` は「列全体」「行全体」を表し、後から追加した行・列にも規則が及びます。行・列の挿入/削除に合わせて範囲は自動で移動し、Undo/Redo・`toJSON()` / `load()` にも含まれます。
+- 貼り付け・フィルは Excel と同じく検証で止めず、違反セルにマークが付きます(`validateAll()` で一覧取得)。
+- 独自の規則タイプは `sheet.registerValidator('email', (value, rule) => ok ? null : 'メールアドレスを入力してください')` のように追加できます(プラグインからも可)。
+
 ## 拡張(プラグイン)
 
 ```ts

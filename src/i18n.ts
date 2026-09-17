@@ -54,6 +54,14 @@ export interface Strings {
   autoFitRow: string;
   appendRow: string;
   appendColumn: string;
+  blankNotAllowed: string;
+  invalidNumber: string;
+  invalidInteger: string;
+  numberMin: string;
+  numberMax: string;
+  numberBetween: string;
+  invalidList: string;
+  validationTitle: string;
 }
 
 const en: Strings = {
@@ -110,6 +118,14 @@ const en: Strings = {
   autoFitRow: 'AutoFit row height',
   appendRow: 'Add row at bottom',
   appendColumn: 'Add column at right',
+  blankNotAllowed: 'This cell cannot be empty.',
+  invalidNumber: 'Please enter a number.',
+  invalidInteger: 'Please enter a whole number.',
+  numberMin: 'Please enter a number of at least {min}.',
+  numberMax: 'Please enter a number of at most {max}.',
+  numberBetween: 'Please enter a number between {min} and {max}.',
+  invalidList: 'Please choose one of: {options}',
+  validationTitle: 'Invalid entry',
 };
 
 const ja: Strings = {
@@ -166,6 +182,14 @@ const ja: Strings = {
   autoFitRow: '行の高さの自動調整',
   appendRow: '末尾に行を追加',
   appendColumn: '末尾に列を追加',
+  blankNotAllowed: 'このセルは空にできません。',
+  invalidNumber: '数値を入力してください。',
+  invalidInteger: '整数を入力してください。',
+  numberMin: '{min} 以上の数値を入力してください。',
+  numberMax: '{max} 以下の数値を入力してください。',
+  numberBetween: '{min} から {max} の間の数値を入力してください。',
+  invalidList: '次のいずれかを選択してください: {options}',
+  validationTitle: '入力規則エラー',
 };
 
 const locales: Record<string, Strings> = { en, ja };

@@ -13,6 +13,8 @@ import { ContextMenu } from './ui/menu';
 import { FormulaBar } from './ui/formulabar';
 import { StatusBar } from './ui/statusbar';
 import { getStrings, type Strings } from './i18n';
+import { validateBuiltin, type ValidationRule, type ListValidationRule } from './model/validation';
+import { openDropdown } from './ui/dropdown';
 import { installDefaultCommands } from './defaults/commands';
 import { installDefaultKeymap } from './defaults/keymap';
 import { installDefaultToolbar } from './defaults/toolbar';
@@ -89,8 +91,13 @@ export interface SpreadsheetEvents extends Record<string, unknown> {
   copy: { range: CellRange; cut: boolean };
   paste: { range: CellRange; block: CellData[][]; internal: boolean };
   fill: { source: CellRange; target: CellRange };
+  /** An entry was rejected by a validation rule (the editor stays open). */
+  validationerror: { address: CellAddress; value: CellValue; message: string; rule: ValidationRule };
   destroy: undefined;
 }
+
+/** Validator for a rule type: return an error message, or null when the value is acceptable. */
+export type Validator = (value: CellValue, rule: ValidationRule, address: CellAddress, sheet: Spreadsheet) => string | null;
 
 /** UI parts that can be shown/hidden at runtime with `Spreadsheet.setVisible`. */
 export type UiPart = 'toolbar' | 'formulaBar' | 'nameBox' | 'formulaInput' | 'statusBar' | 'contextMenu' | 'rowHeaders' | 'columnHeaders' | 'headers' | 'gridlines' | 'fillHandle';
@@ -132,6 +139,9 @@ export class Spreadsheet {
   readonly editTextResolvers: EditTextResolver[] = [];
   readonly cellRenderers: CellRenderer[] = [];
 
+  private validators = new Map<string, Validator>();
+  private validationTip: HTMLElement | null = null;
+  private closeDropdown: (() => void) | null = null;
   private _editMode: EditMode | null = null;
   private editAddress: CellAddress | null = null;
   private editOriginal = '';
@@ -264,6 +274,103 @@ export class Spreadsheet {
   }
 
   // ---------------------------------------------------------------------------
+  // Data validation
+  // ---------------------------------------------------------------------------
+
+  /** Register (or replace) the validator for a rule `type`. Built-ins: `number`, `list`. */
+  registerValidator(type: string, validator: Validator): () => void {
+    this.validators.set(type, validator);
+    return () => {
+      if (this.validators.get(type) === validator) this.validators.delete(type);
+    };
+  }
+
+  /** Validation rule for a cell, if any. */
+  getValidation(address: CellAddress): ValidationRule | undefined {
+    return this.model.getValidation(address.row, address.col);
+  }
+
+  /** Error message for `value` at `address`, or null when valid (no rule counts as valid). */
+  validate(address: CellAddress, value: CellValue): string | null {
+    const rule = this.model.getValidation(address.row, address.col);
+    if (!rule) return null;
+    const custom = this.validators.get(rule.type);
+    if (custom) return custom(value, rule, address, this);
+    return validateBuiltin(rule, value, this.strings);
+  }
+
+  /** Whether the stored value of a cell violates its rule (used for the on-grid marker). */
+  isInvalid(address: CellAddress): boolean {
+    if (!this.model.getValidation(address.row, address.col)) return false;
+    return this.validate(address, this.model.getValue(address.row, address.col)) !== null;
+  }
+
+  /** Every non-empty cell whose value violates its rule. */
+  validateAll(): { address: CellAddress; message: string }[] {
+    const out: { address: CellAddress; message: string }[] = [];
+    for (const [address, data] of this.model.entries()) {
+      const msg = this.validate(address, data.value);
+      if (msg) out.push({ address, message: msg });
+    }
+    return out;
+  }
+
+  /** Show a validation error bubble under a cell (auto-hides on the next key/click). */
+  showValidationError(address: CellAddress, message: string): void {
+    this.hideValidationError();
+    const tip = document.createElement('div');
+    tip.className = 'cui-validation-error';
+    tip.setAttribute('role', 'alert');
+    const title = document.createElement('div');
+    title.className = 'cui-validation-error-title';
+    title.textContent = this.strings.validationTitle;
+    const body = document.createElement('div');
+    body.textContent = message;
+    tip.append(title, body);
+    const rect = this.grid.cellRect(address);
+    tip.style.left = `${rect.left}px`;
+    tip.style.top = `${rect.top + rect.height + 2}px`;
+    this.grid.overlayLayer.appendChild(tip);
+    this.validationTip = tip;
+  }
+
+  hideValidationError(): void {
+    this.validationTip?.remove();
+    this.validationTip = null;
+  }
+
+  /** Open the list dropdown for the active cell (Alt+↓ / the arrow button). Returns false when the cell has no list rule. */
+  openListDropdown(): boolean {
+    const address = { ...this.selection.active };
+    const rule = this.model.getValidation(address.row, address.col);
+    if (!rule || rule.type !== 'list') return false;
+    const list = rule as ListValidationRule;
+    if (this.isEditing) this.commitEdit();
+    this.closeListDropdown();
+    const rect = this.grid.cellRect(address);
+    const vp = this.grid.viewport.getBoundingClientRect();
+    this.closeDropdown = openDropdown({
+      options: list.options,
+      current: this.displayText(address),
+      host: this.popoverHost,
+      anchor: { left: vp.left + rect.left - this.grid.viewport.scrollLeft, top: vp.top + rect.top - this.grid.viewport.scrollTop, width: rect.width, height: rect.height },
+      onPick: (value) => {
+        this.model.transact('enter', () => this.model.setCell(address.row, address.col, { ...this.parseInput(String(value), address), value }));
+      },
+      onClose: () => {
+        this.closeDropdown = null;
+        this.focus();
+      },
+    });
+    return true;
+  }
+
+  closeListDropdown(): void {
+    this.closeDropdown?.();
+    this.closeDropdown = null;
+  }
+
+  // ---------------------------------------------------------------------------
   // Focus & editing
   // ---------------------------------------------------------------------------
 
@@ -391,6 +498,22 @@ export class Spreadsheet {
     const address = this.editAddress;
     const text = this._editMode === 'formula' ? this.formulaBar.input.value : this.grid.editor.value;
     const wasEnterMode = this._editMode === 'enter';
+    if (text !== this.editOriginal || options.fillSelection) {
+      // Data validation: reject the entry and keep editing, like Excel's error alert.
+      const targets = options.fillSelection && !this.selection.isSingleCell ? Array.from(iterateRange(this.selection.range)) : [address];
+      for (const t of targets) {
+        const parsed = this.parseInput(text, t);
+        const message = this.validate(t, parsed.value);
+        if (message) {
+          this.events.emit('validationerror', { address: t, value: parsed.value, message, rule: this.model.getValidation(t.row, t.col)! });
+          this.showValidationError(address, message);
+          const target = this._editMode === 'formula' ? this.formulaBar.input : this.grid.editor;
+          target.focus({ preventScroll: true });
+          target.select();
+          return false;
+        }
+      }
+    }
     this.closeEditor();
     if (text !== this.editOriginal || options.fillSelection) {
       const cell = this.parseInput(text, address);
@@ -420,6 +543,7 @@ export class Spreadsheet {
   }
 
   private closeEditor(): void {
+    this.hideValidationError();
     this._editMode = null;
     this.editAddress = null;
     this.grid.hideEditor();
@@ -1004,6 +1128,8 @@ export class Spreadsheet {
         this.refreshAll();
       }),
       this.selection.events.on('change', () => {
+        this.hideValidationError();
+        this.closeListDropdown();
         this.tabStartColGuard();
         this.grid.scheduleRender();
         this.formulaBar.update();
@@ -1031,6 +1157,7 @@ export class Spreadsheet {
 
   private onKeyDown(e: KeyboardEvent): void {
     if (e.isComposing || e.keyCode === 229) return;
+    if (this.validationTip && e.key !== 'Tab') this.hideValidationError();
     const context = this.isEditing ? 'edit' : 'grid';
     const binding = this.keymap.resolve(e, context);
     if (binding) {
@@ -1097,6 +1224,8 @@ export class Spreadsheet {
     if (this.destroyed) return;
     this.destroyed = true;
     this.events.emit('destroy', undefined);
+    this.closeListDropdown();
+    this.hideValidationError();
     for (const cleanup of this.pluginCleanups.values()) cleanup();
     this.pluginCleanups.clear();
     for (const d of this.disposers) d();

@@ -53,6 +53,7 @@ export class GridView {
   private readonly cellsLayer: HTMLElement;
   private readonly bordersLayer: HTMLElement;
   private readonly overlay: HTMLElement;
+  private readonly dropdownButton: HTMLElement;
   private readonly rangeParts: HTMLElement[] = [];
   private readonly activeBox: HTMLElement;
   private readonly fillHandle: HTMLElement;
@@ -97,6 +98,9 @@ export class GridView {
     this.fillPreview = el('div', 'cui-fill-preview', this.overlay);
     this.activeBox = el('div', 'cui-active', this.overlay);
     this.fillHandle = el('div', 'cui-fill-handle', this.overlay);
+    this.dropdownButton = el('div', 'cui-dropdown-button', this.overlay);
+    this.dropdownButton.textContent = '▾';
+    this.dropdownButton.title = 'Alt+↓';
     this.editor = el('textarea', 'cui-editor', this.canvas);
     this.editor.setAttribute('autocomplete', 'off');
     this.editor.setAttribute('autocorrect', 'off');
@@ -176,6 +180,11 @@ export class GridView {
   private pointerToContent(e: MouseEvent): { x: number; y: number } {
     const rect = this.viewport.getBoundingClientRect();
     return { x: e.clientX - rect.left + this.viewport.scrollLeft, y: e.clientY - rect.top + this.viewport.scrollTop };
+  }
+
+  /** Layer above the cells for transient UI (validation bubbles, previews). */
+  get overlayLayer(): HTMLElement {
+    return this.overlay;
   }
 
   get visibleRows(): [number, number] {
@@ -452,6 +461,7 @@ export class GridView {
     }
     ts.width = extra ? px(width + extra) : '';
     elem.classList.toggle('cui-cell--overflow', overflowing);
+    elem.classList.toggle('cui-cell--invalid', data !== undefined && this.sheet.isInvalid(addr));
     elem.classList.toggle('cui-cell--active', sameAddress(addr, this.sheet.selection.active));
     for (const hook of this.sheet.cellRenderers) hook(elem, data, addr, this.sheet);
   }
@@ -595,6 +605,17 @@ export class GridView {
     fh.top = px(rr.top + rr.height - 4);
     this.fillHandle.style.display = this.editing || this.sheet.options.fillHandle === false ? 'none' : '';
 
+    // Dropdown arrow for list-validated cells (shown beside the active cell, like Excel).
+    const rule = this.sheet.model.getValidation(sel.active.row, sel.active.col);
+    const showDropdown = !!rule && rule.type === 'list' && (rule as { dropdown?: boolean }).dropdown !== false && !this.editing && sel.isSingleCell;
+    const db = this.dropdownButton.style;
+    db.display = showDropdown ? '' : 'none';
+    if (showDropdown) {
+      db.left = px(ar.left + ar.width);
+      db.top = px(ar.top);
+      db.height = px(ar.height);
+    }
+
     const cut = this.sheet.clipboard.cutRange;
     if (cut) {
       const cr = this.rangeRect(cut);
@@ -707,6 +728,11 @@ export class GridView {
       this.sheet.focus();
     });
     this.fillHandle.addEventListener('mousedown', (e) => this.onFillHandleMouseDown(e));
+    this.dropdownButton.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.sheet.openListDropdown();
+    });
     window.addEventListener('mousemove', this.onWindowMouseMove);
     window.addEventListener('mouseup', this.onWindowMouseUp);
   }

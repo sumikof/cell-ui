@@ -260,6 +260,27 @@
 }
 .cui-root--editing .cui-fill-handle { display: none; }
 
+/* Data validation --------------------------------------------------------- */
+.cui-cell--invalid::after {
+  content: ""; position: absolute; right: 0; top: 0;
+  border-style: solid; border-width: 0 7px 7px 0; border-color: transparent #d13438 transparent transparent;
+}
+.cui-dropdown-button {
+  position: absolute; width: 18px; display: flex; align-items: center; justify-content: center;
+  background: #fff; border: 1px solid #8f8f8f; border-radius: 2px; color: #333; font-size: 11px;
+  cursor: pointer; pointer-events: auto; z-index: 4; box-sizing: border-box;
+}
+.cui-dropdown-button:hover { background: #eef5f0; border-color: var(--cui-accent); }
+.cui-dropdown { padding: 2px; max-height: 240px; overflow-y: auto; }
+.cui-dropdown-item { display: block; width: 100%; padding: 4px 10px; border: 0; background: transparent; font: inherit; text-align: left; cursor: pointer; white-space: nowrap; }
+.cui-dropdown-item--active, .cui-dropdown-item:hover { background: #d3f0e0; }
+.cui-validation-error {
+  position: absolute; z-index: 20; min-width: 160px; max-width: 320px; padding: 6px 10px;
+  background: #fff; border: 1px solid #d13438; border-left-width: 4px; border-radius: 3px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15); color: #222; font-size: 12px; white-space: normal; pointer-events: none;
+}
+.cui-validation-error-title { font-weight: 600; color: #d13438; margin-bottom: 2px; }
+
 /* Resize guides ----------------------------------------------------------- */
 .cui-resize-guide { position: absolute; z-index: 10; pointer-events: none; }
 .cui-resize-guide-v { top: 0; bottom: 0; width: 0; border-left: 1px dashed #555; }

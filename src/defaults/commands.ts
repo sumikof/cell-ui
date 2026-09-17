@@ -345,6 +345,9 @@ export function installDefaultCommands(commands: CommandRegistry<Spreadsheet>): 
     });
   });
 
+  // --- Validation ------------------------------------------------------------
+  reg('validation.openList', (sheet) => sheet.openListDropdown());
+
   // --- Insert ----------------------------------------------------------------
   reg('insert.date', (sheet) => {
     const d = new Date();

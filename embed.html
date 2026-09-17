@@ -42,7 +42,20 @@
   <h2>E. 固定幅の表で列名を差し替え(<code>column-labels</code>)、関数入力欄を非表示(<code>formula-input="false"</code>: セル位置表示も消えテーブルだけになる)</h2>
   <cell-ui-sheet id="named" rows="5" cols="4" locale="ja" fit-content column-labels="品名,数量,単価,備考" formula-input="false" toolbar="false" status-bar="false"></cell-ui-sheet>
 
+  <h2>F. 入力規則(数量: 数値のみ / 区分: リスト選択のみ)</h2>
+  <cell-ui-sheet id="valid" rows="5" cols="3" locale="ja" fit-content column-labels="品名,数量,区分" formula-input="false" toolbar="false" status-bar="false"></cell-ui-sheet>
+
   <script>
+    document.getElementById('valid').whenReady.then((sheet) => {
+      sheet.model.setValidation(CellUI.columnRange(1), { type: 'number', min: 0, integer: true });
+      sheet.model.setValidation(CellUI.columnRange(2), { type: 'list', options: ['通常', '特売', '取り寄せ'] });
+      sheet.model.setValue(0, 0, 'りんご');
+      sheet.model.setValue(0, 1, 12);
+      sheet.model.setValue(0, 2, '通常');
+      sheet.model.clearHistory();
+      sheet.events.on('validationerror', (e) => console.log('validation error', e.message));
+    });
+
     const bare = document.getElementById('bare');
     bare.whenReady.then((sheet) => {
       ['品名', '数量', '単価', '備考'].forEach((v, c) => sheet.model.setCell(0, c, { value: v, style: { bold: true, backgroundColor: '#f2f2f2', hAlign: 'center' } }));

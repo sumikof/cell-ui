@@ -47,7 +47,7 @@ await page.keyboard.type('123');
 await page.keyboard.press('Tab');
 check('number parsed', (await value(11, 0)) === 123);
 check('Tab moves right', (await active()) === 'B12', await active());
-await page.keyboard.type('abc');
+await page.keyboard.type('5'); // column B carries a number rule in the demo
 await page.keyboard.press('Enter');
 check('Enter after Tab returns to start column', (await active()) === 'A13', await active());
 
@@ -223,6 +223,23 @@ check('headers and toolbar can be re-enabled at runtime', await page.evaluate(()
 const namedHeaders = await page.evaluate(() => Array.from(document.getElementById('named').shadowRoot.querySelectorAll('.cui-header-col')).map((h) => h.textContent));
 check('column labels replace letters on fixed-width sheet', namedHeaders.join(',') === '品名,数量,単価,備考', namedHeaders.join(','));
 check('formula-input=false leaves only the table (no name box)', await page.evaluate(() => { const r = document.getElementById('named').shadowRoot; return !r.querySelector('.cui-formulabar') && !r.querySelector('.cui-toolbar') && !r.querySelector('.cui-statusbar') && r.querySelector('.cui-root').children.length === 1; }));
+// Data validation sample
+const validVp = await page.evaluateHandle(() => document.getElementById('valid').shadowRoot.querySelector('.cui-viewport'));
+await validVp.asElement().click({ position: { x: 120, y: 32 } }); // B2 (数量)
+await page.keyboard.type('abc');
+await page.keyboard.press('Enter');
+check('number rule rejects text and keeps editing', await page.evaluate(() => { const s = document.getElementById('valid').sheet; return s.isEditing && s.model.getValue(1, 1) === null && !!document.getElementById('valid').shadowRoot.querySelector('.cui-validation-error'); }));
+await page.screenshot({ path: 'e2e-out/08-validation-error.png', clip: { x: 0, y: (await validVp.asElement().boundingBox()).y - 10, width: 500, height: 200 } });
+await page.keyboard.press('Escape');
+await page.keyboard.type('7');
+await page.keyboard.press('Tab');
+check('number rule accepts a number', (await page.evaluate(() => document.getElementById('valid').sheet.model.getValue(1, 1))) === 7);
+check('list cell shows dropdown button', await page.evaluate(() => getComputedStyle(document.getElementById('valid').shadowRoot.querySelector('.cui-dropdown-button')).display !== 'none'));
+await page.keyboard.press('Alt+ArrowDown');
+check('Alt+Down opens the list', await page.evaluate(() => !!document.getElementById('valid').shadowRoot.querySelector('.cui-dropdown')));
+await page.keyboard.press('ArrowDown');
+await page.keyboard.press('Enter');
+check('choosing from the list sets the value', (await page.evaluate(() => document.getElementById('valid').sheet.model.getValue(1, 2))) === '特売');
 await page.screenshot({ path: 'e2e-out/06-embed.png', fullPage: true });
 
 check('no page errors', errors.length === 0, errors.join(' | '));

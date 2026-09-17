@@ -1,6 +1,7 @@
 import { Emitter } from './emitter';
 import { cellKey, iterateRange, normalizeRange, parseCellKey } from './address';
 import type { CellAddress, CellData, CellRange, CellStyle, CellValue } from './types';
+import { entryContains, shiftEntries, subtractRange, type ValidationEntry, type ValidationRule } from './validation';
 
 export interface SheetModelOptions {
   rows?: number;
@@ -20,6 +21,8 @@ export interface ChangeEvent {
   structural: boolean;
   /** True when column widths or row heights changed. */
   sizes: boolean;
+  /** True when validation rules changed. */
+  validations: boolean;
   /** Label of the transaction that produced this change ("undo"/"redo" for history). */
   label: string;
   /** True when the change comes from undo/redo. */
@@ -47,6 +50,7 @@ interface Transaction {
   colWidths: Map<number, SizeChange>;
   rowHeights: Map<number, SizeChange>;
   dims: { before: [number, number]; after: [number, number] } | null;
+  validations: { before: ValidationEntry[]; after: ValidationEntry[] } | null;
 }
 
 export interface SheetSnapshot {
@@ -55,6 +59,7 @@ export interface SheetSnapshot {
   cells: Record<string, CellData>;
   colWidths: Record<string, number>;
   rowHeights: Record<string, number>;
+  validations?: ValidationEntry[];
 }
 
 export interface ClearOptions {
@@ -70,6 +75,10 @@ function cloneCell(cell: CellData | undefined): CellData | undefined {
     style: cell.style ? { ...cell.style } : undefined,
     meta: cell.meta ? { ...cell.meta } : undefined,
   };
+}
+
+function cloneEntries(entries: ValidationEntry[]): ValidationEntry[] {
+  return entries.map((e) => ({ range: { start: { ...e.range.start }, end: { ...e.range.end } }, rule: { ...e.rule } }));
 }
 
 function isEmptyCell(cell: CellData | undefined): boolean {
@@ -112,6 +121,7 @@ export class SheetModel {
   private cells = new Map<string, CellData>();
   private colWidths = new Map<number, number>();
   private rowHeights = new Map<number, number>();
+  private validations: ValidationEntry[] = [];
   private undoStack: Transaction[] = [];
   private redoStack: Transaction[] = [];
   private tx: Transaction | null = null;
@@ -208,7 +218,7 @@ export class SheetModel {
   transact<T>(label: string, fn: () => T): T {
     const outermost = this.txDepth === 0;
     if (outermost) {
-      this.tx = { label, cells: new Map(), colWidths: new Map(), rowHeights: new Map(), dims: null };
+      this.tx = { label, cells: new Map(), colWidths: new Map(), rowHeights: new Map(), dims: null, validations: null };
     }
     this.txDepth++;
     try {
@@ -263,7 +273,8 @@ export class SheetModel {
     for (const [k, ch] of tx.colWidths) if (ch.before === ch.after) tx.colWidths.delete(k);
     for (const [k, ch] of tx.rowHeights) if (ch.before === ch.after) tx.rowHeights.delete(k);
     if (tx.dims && tx.dims.before[0] === tx.dims.after[0] && tx.dims.before[1] === tx.dims.after[1]) tx.dims = null;
-    const empty = tx.cells.size === 0 && tx.colWidths.size === 0 && tx.rowHeights.size === 0 && !tx.dims;
+    if (tx.validations && JSON.stringify(tx.validations.before) === JSON.stringify(tx.validations.after)) tx.validations = null;
+    const empty = tx.cells.size === 0 && tx.colWidths.size === 0 && tx.rowHeights.size === 0 && !tx.dims && !tx.validations;
     if (empty) return;
     this.undoStack.push(tx);
     if (this.undoStack.length > this.historyLimit) this.undoStack.shift();
@@ -277,6 +288,7 @@ export class SheetModel {
       cells,
       structural: tx.dims !== null,
       sizes: tx.colWidths.size > 0 || tx.rowHeights.size > 0,
+      validations: tx.validations !== null,
       label,
       fromHistory,
     });
@@ -289,6 +301,7 @@ export class SheetModel {
       this._rows = r;
       this._cols = c;
     }
+    if (tx.validations) this.validations = cloneEntries(tx.validations[side]);
     for (const [key, ch] of tx.cells) {
       const data = cloneCell(ch[side]);
       if (data) this.cells.set(key, data);
@@ -348,6 +361,13 @@ export class SheetModel {
     ch.after = height;
     if (height === undefined) this.rowHeights.delete(row);
     else this.rowHeights.set(row, height);
+  }
+
+  private writeValidations(next: ValidationEntry[]): void {
+    const tx = this.tx!;
+    if (!tx.validations) tx.validations = { before: cloneEntries(this.validations), after: [] };
+    tx.validations.after = cloneEntries(next);
+    this.validations = next;
   }
 
   private writeDims(rows: number, cols: number): void {
@@ -479,6 +499,41 @@ export class SheetModel {
   }
 
   // ---------------------------------------------------------------------------
+  // Data validation
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Set (or with `null`, remove) the validation rule for a range. Later rules
+   * win over earlier ones; use `columnRange(col)` / `rowRange(row)` to cover
+   * a whole column/row including rows added later.
+   */
+  setValidation(range: CellRange, rule: ValidationRule | null): void {
+    this.mutate('validation', () => {
+      const r = normalizeRange(range);
+      const rest = subtractRange(this.validations, r);
+      this.writeValidations(rule ? [...rest, { range: r, rule: { ...rule } }] : rest);
+    });
+  }
+
+  /** The rule applying to a cell, if any. */
+  getValidation(row: number, col: number): ValidationRule | undefined {
+    const addr = { row, col };
+    for (let i = this.validations.length - 1; i >= 0; i--) {
+      if (entryContains(this.validations[i], addr)) return this.validations[i].rule;
+    }
+    return undefined;
+  }
+
+  /** All validation entries (copies). */
+  getValidations(): ValidationEntry[] {
+    return cloneEntries(this.validations);
+  }
+
+  clearValidations(): void {
+    this.mutate('validation', () => this.writeValidations([]));
+  }
+
+  // ---------------------------------------------------------------------------
   // Structural operations
   // ---------------------------------------------------------------------------
 
@@ -557,6 +612,7 @@ export class SheetModel {
       movedSizes.push([idx + delta, size]);
     }
     for (const [idx, size] of movedSizes) write(idx, size);
+    if (this.validations.length) this.writeValidations(shiftEntries(this.validations, axis, at, delta));
   }
 
   // ---------------------------------------------------------------------------
@@ -570,7 +626,7 @@ export class SheetModel {
     for (const [k, v] of this.colWidths) colWidths[String(k)] = v;
     const rowHeights: Record<string, number> = {};
     for (const [k, v] of this.rowHeights) rowHeights[String(k)] = v;
-    return { rows: this._rows, cols: this._cols, cells, colWidths, rowHeights };
+    return { rows: this._rows, cols: this._cols, cells, colWidths, rowHeights, validations: cloneEntries(this.validations) };
   }
 
   /** Replace the sheet content with a snapshot. Recorded as a single undoable transaction. */
@@ -589,6 +645,7 @@ export class SheetModel {
       }
       for (const [k, v] of Object.entries(snapshot.colWidths ?? {})) this.writeColWidth(Number(k), v);
       for (const [k, v] of Object.entries(snapshot.rowHeights ?? {})) this.writeRowHeight(Number(k), v);
+      this.writeValidations(cloneEntries(snapshot.validations ?? []));
     });
   }
 }

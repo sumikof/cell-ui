@@ -90,6 +90,8 @@ export function installDefaultKeymap(keymap: Keymap): void {
   keymap.bind('Mod+0', 'columns.hide');
   keymap.bind('Mod+Shift+0', 'columns.unhide');
 
+  keymap.bind('Alt+ArrowDown', 'validation.openList');
+
   keymap.bind('Mod+;', 'insert.date');
   keymap.bind('Mod+Shift+:', 'insert.time');
   keymap.bind('Mod+:', 'insert.time');
