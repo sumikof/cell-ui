@@ -6,13 +6,18 @@
   "main": "./dist/cell-ui.js",
   "module": "./dist/cell-ui.js",
   "types": "./dist/index.d.ts",
+  "unpkg": "./dist/cell-ui.iife.js",
+  "jsdelivr": "./dist/cell-ui.iife.js",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/cell-ui.js"
+      "import": "./dist/cell-ui.js",
+      "default": "./dist/cell-ui.iife.js"
     },
-    "./style.css": "./dist/cell-ui.css"
+    "./style.css": "./dist/cell-ui.css",
+    "./iife": "./dist/cell-ui.iife.js"
   },
+  "sideEffects": ["./dist/cell-ui.css", "./src/styles.css", "./src/index.ts"],
   "files": ["dist"],
   "scripts": {
     "dev": "vite",

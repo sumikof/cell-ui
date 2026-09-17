@@ -79,7 +79,7 @@ export class ContextMenu {
     if (menu.lastElementChild?.classList.contains('cui-menu-separator')) menu.lastElementChild.remove();
     menu.style.left = `${clientX}px`;
     menu.style.top = `${clientY}px`;
-    document.body.appendChild(menu);
+    this.sheet.popoverHost.appendChild(menu);
     const rect = menu.getBoundingClientRect();
     if (rect.right > window.innerWidth) menu.style.left = `${Math.max(0, clientX - rect.width)}px`;
     if (rect.bottom > window.innerHeight) menu.style.top = `${Math.max(0, clientY - rect.height)}px`;

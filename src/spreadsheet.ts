@@ -250,7 +250,24 @@ export class Spreadsheet {
   }
 
   get hasFocus(): boolean {
-    return this.root.contains(document.activeElement);
+    return this.root.contains(this.activeElement);
+  }
+
+  /** The focused element, looking inside a Shadow DOM when the sheet lives in one. */
+  get activeElement(): Element | null {
+    const rootNode = this.root.getRootNode() as Document | ShadowRoot;
+    return ('activeElement' in rootNode ? rootNode.activeElement : null) ?? document.activeElement;
+  }
+
+  /**
+   * Where floating UI (context menu, colour picker, popovers) is appended.
+   * Defaults to `document.body`, or to the shadow root when embedded via the
+   * `<cell-ui-sheet>` custom element so that styles keep applying.
+   */
+  get popoverHost(): HTMLElement | ShadowRoot {
+    const rootNode = this.root.getRootNode();
+    if (rootNode instanceof ShadowRoot) return rootNode;
+    return document.body;
   }
 
   private armSentinel(): void {
@@ -313,7 +330,7 @@ export class Spreadsheet {
     if (!this.isEditing) return;
     const ed = this.grid.editor;
     ed.value = text;
-    if (!options.fromFormulaBar && this.formulaBar.input !== document.activeElement) this.formulaBar.input.value = text;
+    if (!options.fromFormulaBar && this.formulaBar.input !== this.activeElement) this.formulaBar.input.value = text;
     this.grid.positionEditor();
   }
 

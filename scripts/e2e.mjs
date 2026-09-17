@@ -168,6 +168,26 @@ check('shift+click extends selection', (await page.evaluate(() => { const r = wi
 await page.click('.cui-corner');
 check('corner selects all', await page.evaluate(() => window.sheet.selection.mode === 'all'));
 
+// Embedding: <script> tag (IIFE build) and <cell-ui-sheet> web component with Shadow DOM
+await page.goto('http://localhost:5199/embed.html');
+await page.waitForSelector('#plain .cui-cell');
+check('IIFE build exposes global CellUI', await page.evaluate(() => typeof window.CellUI?.Spreadsheet === 'function'));
+check('web component renders in shadow root', await page.evaluate(() => !!document.getElementById('wc').shadowRoot.querySelector('.cui-cell')));
+const wcText = await page.evaluate(() => document.getElementById('wc').shadowRoot.querySelector('.cui-cell-text').textContent);
+check('web component ready event ran', wcText === 'Web Component', wcText);
+const wcColor = await page.evaluate(() => getComputedStyle(document.getElementById('wc').shadowRoot.querySelector('.cui-cell-text')).color);
+check('host CSS does not leak into shadow DOM', wcColor !== 'rgb(255, 0, 0)', wcColor);
+await page.click('#wc');
+const wcHandle = await page.evaluateHandle(() => document.getElementById('wc').shadowRoot.querySelector('.cui-viewport'));
+await wcHandle.asElement().click({ position: { x: 30, y: 32 } });
+await page.keyboard.type('typed');
+await page.keyboard.press('Enter');
+check('typing works inside web component', (await page.evaluate(() => document.getElementById('wc').sheet.model.getValue(1, 0))) === 'typed');
+await wcHandle.asElement().click({ button: 'right', position: { x: 30, y: 10 } });
+check('context menu opens inside shadow root', await page.evaluate(() => !!document.getElementById('wc').shadowRoot.querySelector('.cui-menu')));
+await page.keyboard.press('Escape');
+await page.screenshot({ path: 'e2e-out/06-embed.png' });
+
 check('no page errors', errors.length === 0, errors.join(' | '));
 await browser.close();
 await server.close();

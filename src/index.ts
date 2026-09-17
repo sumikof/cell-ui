@@ -22,9 +22,15 @@ export { installDefaultKeymap } from './defaults/keymap';
 export { installDefaultToolbar, FONT_FAMILIES, FONT_SIZES } from './defaults/toolbar';
 export { installDefaultContextMenu } from './defaults/menu';
 
+export { CellUiElement, defineCellUiElement, injectStyles, CELL_UI_CSS } from './element';
+
 import { Spreadsheet, type SpreadsheetOptions } from './spreadsheet';
+import { defineCellUiElement } from './element';
 
 /** Convenience factory. */
 export function createSpreadsheet(container: HTMLElement, options?: SpreadsheetOptions): Spreadsheet {
   return new Spreadsheet(container, options);
 }
+
+// Register <cell-ui-sheet> automatically when running in a browser.
+if (typeof window !== 'undefined' && typeof customElements !== 'undefined') defineCellUiElement();

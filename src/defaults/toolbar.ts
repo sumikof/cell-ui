@@ -153,6 +153,7 @@ function colorButton(sheet: Spreadsheet, key: 'color' | 'backgroundColor', icon:
   arrow.addEventListener('click', () => {
     openColorPicker(arrow, {
       strings: sheet.strings,
+      host: sheet.popoverHost,
       resetLabel,
       onPick: (color) => {
         last = color ?? last;
@@ -203,7 +204,7 @@ function borderMenuButton(sheet: Spreadsheet): HTMLElement {
     const rect = btn.getBoundingClientRect();
     pop.style.left = `${rect.left}px`;
     pop.style.top = `${rect.bottom + 2}px`;
-    document.body.appendChild(pop);
+    sheet.popoverHost.appendChild(pop);
     const onDown = (e: MouseEvent) => {
       if (!pop.contains(e.target as Node)) close();
     };

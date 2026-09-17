@@ -83,9 +83,9 @@ export class FormulaBar {
   update(): void {
     const sheet = this.sheet;
     const sel = sheet.selection;
-    if (document.activeElement !== this.nameBox) this.nameBox.value = addressToA1(sel.active);
+    if (sheet.activeElement !== this.nameBox) this.nameBox.value = addressToA1(sel.active);
     if (sheet.isEditing) {
-      if (document.activeElement !== this.input) this.input.value = sheet.editorText;
+      if (sheet.activeElement !== this.input) this.input.value = sheet.editorText;
     } else {
       this.input.value = sheet.editText(sel.active);
     }

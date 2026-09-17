@@ -8,8 +8,8 @@ export default defineConfig(({ command }) => ({
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
       name: 'CellUI',
-      fileName: 'cell-ui',
-      formats: ['es'],
+      fileName: (format) => (format === 'es' ? 'cell-ui.js' : 'cell-ui.iife.js'),
+      formats: ['es', 'iife'],
     },
     cssFileName: 'cell-ui',
     sourcemap: true,
@@ -18,5 +18,6 @@ export default defineConfig(({ command }) => ({
     environment: 'jsdom',
     globals: true,
     include: ['test/**/*.test.ts'],
+    setupFiles: ['test/setup.ts'],
   },
 }));

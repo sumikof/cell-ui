@@ -17,6 +17,8 @@ export interface ColorPickerOptions {
   resetLabel: string;
   onPick: (color: string | undefined) => void;
   onClose?: () => void;
+  /** Element the popover is appended to (default `document.body`). */
+  host?: HTMLElement | ShadowRoot;
 }
 
 /** Popover palette. Returns the element; caller positions and removes it. */
@@ -70,7 +72,7 @@ export function openColorPicker(anchor: HTMLElement, options: ColorPickerOptions
   const rect = anchor.getBoundingClientRect();
   pop.style.left = `${rect.left}px`;
   pop.style.top = `${rect.bottom + 2}px`;
-  document.body.appendChild(pop);
+  (options.host ?? document.body).appendChild(pop);
   const pr = pop.getBoundingClientRect();
   if (pr.right > window.innerWidth) pop.style.left = `${Math.max(0, window.innerWidth - pr.width - 4)}px`;
 

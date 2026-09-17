@@ -52,6 +52,84 @@ sheet.load(snapshot);            // 復元
 | `plugins` | – | `SpreadsheetPlugin[]` |
 | `defaults.keymap / toolbar / contextMenu` | true | 既定のキー割り当て・ツールバー・メニューを無効化して独自定義する |
 
+## 他の Web システムへの埋め込み
+
+依存ライブラリはなく、ビルド成果物は `dist/cell-ui.js`(ES モジュール)、`dist/cell-ui.iife.js`(`<script>` 用の単一ファイル、グローバル `CellUI`)、`dist/cell-ui.css` の 3 つです。用途に応じて次のいずれかを選べます(`embed.html` にサンプルがあります)。
+
+### 1. `<script>` タグだけで使う(ビルド環境が無いシステム、レガシーな画面など)
+
+```html
+<link rel="stylesheet" href="cell-ui.css">
+<script src="cell-ui.iife.js"></script>
+<div id="sheet" style="height:500px"></div>
+<script>
+  const sheet = new CellUI.Spreadsheet(document.getElementById('sheet'), { locale: 'ja' });
+  sheet.model.setValue(0, 0, 'Hello');
+  sheet.model.events.on('change', () => save(sheet.toJSON()));
+</script>
+```
+
+### 2. Web Component `<cell-ui-sheet>`(CSS を Shadow DOM で分離)
+
+ホスト側の CSS と干渉しないので、既存ページのスタイルが複雑な場合に向いています。どちらのビルドを読み込んでも自動登録されます。
+
+```html
+<cell-ui-sheet rows="200" cols="30" locale="ja" style="height:500px"></cell-ui-sheet>
+<script>
+  const el = document.querySelector('cell-ui-sheet');
+  el.whenReady.then((sheet) => sheet.model.setValue(0, 0, 'Hello'));
+  el.addEventListener('change', (e) => console.log(e.detail.cells));   // change / selectionchange / editcommit / paste / copy
+  el.data = savedSnapshot;   // JSON の読み込み。el.data で取り出し
+</script>
+```
+
+属性: `rows` `cols` `locale` `toolbar` `formula-bar` `status-bar` `context-menu` `gridlines` `fill-handle`(`"false"` で無効)。プロパティ: `sheet` `data` `options`(接続前に設定するとコンストラクタオプションに合成)。
+
+### 3. npm パッケージとして bundler から使う(React / Vue / Angular / Svelte など)
+
+```tsx
+// React
+import { useEffect, useRef } from 'react';
+import { Spreadsheet } from 'cell-ui';
+import 'cell-ui/style.css';
+
+export function Sheet({ onChange }: { onChange: (json: unknown) => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const sheet = new Spreadsheet(ref.current!, { locale: 'ja' });
+    const off = sheet.model.events.on('change', () => onChange(sheet.toJSON()));
+    return () => { off(); sheet.destroy(); };
+  }, []);
+  return <div ref={ref} style={{ height: 500 }} />;
+}
+```
+
+```vue
+<!-- Vue -->
+<template><div ref="el" style="height: 500px" /></template>
+<script setup lang="ts">
+import { onMounted, onBeforeUnmount, ref } from 'vue';
+import { Spreadsheet } from 'cell-ui';
+import 'cell-ui/style.css';
+const el = ref<HTMLDivElement>();
+let sheet: Spreadsheet;
+onMounted(() => { sheet = new Spreadsheet(el.value!, { locale: 'ja' }); });
+onBeforeUnmount(() => sheet.destroy());
+</script>
+```
+
+### 4. iframe
+
+別ドメインや完全に独立させたい場合は、`index.html` のようなページを iframe で表示し、`postMessage` で `sheet.toJSON()` / `sheet.load()` をやり取りしてください。クリップボード操作は iframe 内でもそのまま動きます。
+
+### 埋め込み時の注意
+
+- コンテナ(または `<cell-ui-sheet>`)に高さを与えてください。`.cui-root` は親要素を 100% で埋めます。
+- `sheet.destroy()` を呼ぶと DOM・イベント・`window` リスナをすべて解放します(SPA で画面遷移する場合に必須)。
+- コンテキストメニューやカラーピッカーは `sheet.popoverHost`(通常 `document.body`、Shadow DOM 内なら shadow root)に追加されます。
+- すべての CSS クラスは `cui-` プレフィックス付きで、色などは `.cui-root` の CSS 変数(`--cui-accent` など)で上書きできます。
+- 内部状態は `sheet.toJSON()` で取得でき、サーバー保存後に `sheet.load()` / `data` オプションで復元できます。
+
 ## ショートカット一覧
 
 | キー | 動作 |
@@ -159,6 +237,7 @@ Excel-like spreadsheet UI for the browser. Framework-free TypeScript. No formula
 - Excel keyboard shortcuts (navigation, editing, clipboard, formatting, fill, structure).
 - Styling toolbar: font, size, bold/italic/underline/strikethrough, text & fill colour, alignment, wrap, borders.
 - Virtualised grid, resizable rows/columns, fill handle, row/column insert/delete/hide, context menu, name box + formula bar, status bar, undo/redo.
+- Embeddable three ways: ES module for bundlers, a single-file IIFE build for `<script>` tags (global `CellUI`), and a `<cell-ui-sheet>` custom element with Shadow-DOM-isolated styles. See `embed.html`.
 
 ```ts
 import { Spreadsheet } from 'cell-ui';

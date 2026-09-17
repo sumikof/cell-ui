@@ -78,7 +78,7 @@ export class Toolbar {
           const value = item.getValue(sheet);
           if (item.editable) {
             const input = el.querySelector('input') as HTMLInputElement;
-            if (document.activeElement !== input) input.value = value;
+            if (sheet.activeElement !== input) input.value = value;
           } else {
             const select = el as HTMLSelectElement;
             if (!Array.from(select.options).some((o) => o.value === value)) {
