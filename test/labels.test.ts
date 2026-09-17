@@ -22,30 +22,40 @@ function make(options = {}) {
 }
 
 describe('formula bar parts', () => {
-  it('hides only the function input while keeping the name box', () => {
+  it('hiding the function input hides the whole bar, name box included', () => {
     const s = make({ formulaBar: { input: false } });
-    expect(s.root.querySelector('.cui-formulabar')).not.toBeNull();
-    expect(s.formulaBar.nameBox.style.display).toBe('');
-    expect(s.formulaBar.input.style.display).toBe('none');
-    expect(s.isVisible('formulaBar')).toBe(true);
-    expect(s.isVisible('nameBox')).toBe(true);
+    expect(s.root.querySelector('.cui-formulabar')).toBeNull();
+    expect(s.isVisible('formulaBar')).toBe(false);
+    expect(s.isVisible('nameBox')).toBe(false);
     expect(s.isVisible('formulaInput')).toBe(false);
+    // Only the table (and toolbar/status bar) remain
+    const order = Array.from(s.root.children).map((c) => c.className.split(' ')[0]);
+    expect(order).toEqual(['cui-toolbar', 'cui-grid', 'cui-statusbar']);
   });
 
-  it('toggles parts at runtime and removes the bar when both are off', () => {
+  it('can hide only the name box, keeping the input', () => {
+    const s = make({ formulaBar: { nameBox: false } });
+    expect(s.root.querySelector('.cui-formulabar')).not.toBeNull();
+    expect(s.formulaBar.nameBox.style.display).toBe('none');
+    expect(s.formulaBar.input.style.display).toBe('');
+  });
+
+  it('toggles parts at runtime', () => {
     const s = make();
     s.setVisible('formulaInput', false);
-    expect(s.formulaBar.input.style.display).toBe('none');
-    expect(s.options.formulaBar).toEqual({ nameBox: true, input: false });
-    s.setVisible('nameBox', false);
     expect(s.options.formulaBar).toBe(false);
     expect(s.root.querySelector('.cui-formulabar')).toBeNull();
     s.setVisible('formulaInput', true);
-    expect(s.options.formulaBar).toEqual({ nameBox: false, input: true });
+    expect(s.options.formulaBar).toBe(true);
     expect(s.root.querySelector('.cui-formulabar')).not.toBeNull();
+    s.setVisible('nameBox', false);
+    expect(s.options.formulaBar).toEqual({ nameBox: false });
     expect(s.formulaBar.nameBox.style.display).toBe('none');
+    expect(s.formulaBar.input.style.display).toBe('');
     s.setVisible('nameBox', true);
     expect(s.options.formulaBar).toBe(true);
+    const order = Array.from(s.root.children).map((c) => c.className.split(' ')[0]);
+    expect(order).toEqual(['cui-toolbar', 'cui-formulabar', 'cui-grid', 'cui-statusbar']);
   });
 });
 
@@ -92,11 +102,13 @@ describe('custom column labels', () => {
     expect(s.columnLabel(0)).toBe('品名');
     expect(s.columnLabel(1)).toBe('数量');
     expect(s.columnLabel(2)).toBe('C');
-    expect(s.formulaBar.input.style.display).toBe('none');
-    expect(s.formulaBar.nameBox.style.display).toBe('');
+    expect(el.shadowRoot!.querySelector('.cui-formulabar')).toBeNull();
     el.setAttribute('column-labels', '["a","b","c"]');
     expect(s.columnLabel(2)).toBe('c');
     el.setAttribute('formula-input', 'true');
+    expect(el.shadowRoot!.querySelector('.cui-formulabar')).not.toBeNull();
+    el.setAttribute('name-box', 'false');
+    expect(s.formulaBar.nameBox.style.display).toBe('none');
     expect(s.formulaBar.input.style.display).toBe('');
     el.setAttribute('formula-bar', 'false');
     expect(el.shadowRoot!.querySelector('.cui-formulabar')).toBeNull();

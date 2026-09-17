@@ -25,9 +25,10 @@ export interface SpreadsheetOptions extends SheetModelOptions {
   /** Show the formatting toolbar (default true). */
   toolbar?: boolean;
   /**
-   * Show the name box / formula bar (default true). An object shows only some
-   * of its parts: `{ nameBox: true, input: false }` keeps the A1 name box but
-   * hides the function/cell-content input.
+   * Show the formula bar (default true). `false` hides it entirely, leaving
+   * only the table. `{ nameBox: false }` keeps the function/cell-content input
+   * but hides the A1 name box. Hiding the input (`{ input: false }`) hides the
+   * whole bar, name box included, so that only the table remains.
    */
   formulaBar?: boolean | { nameBox?: boolean; input?: boolean };
   /** Show the status bar with selection statistics (default true). */
@@ -158,7 +159,7 @@ export class Spreadsheet {
     this.statusBar = new StatusBar(this);
     this.contextMenu = new ContextMenu(this);
     if (options.toolbar !== false) this.root.appendChild(this.toolbar.element);
-    if (options.formulaBar !== false) this.root.appendChild(this.formulaBar.element);
+    if (this.formulaBarParts().input) this.root.appendChild(this.formulaBar.element);
     this.root.appendChild(this.grid.root);
     if (options.statusBar !== false) this.root.appendChild(this.statusBar.element);
     container.appendChild(this.root);
@@ -466,12 +467,16 @@ export class Spreadsheet {
         this.mountPanel(this.formulaBar.element, visible, o.toolbar === false ? 0 : 1);
         this.formulaBar.applyOptions();
         break;
-      case 'nameBox':
-      case 'formulaInput': {
+      case 'formulaInput':
+        // The name box never shows on its own: hiding the input hides the bar.
+        o.formulaBar = visible;
+        this.mountPanel(this.formulaBar.element, visible, o.toolbar === false ? 0 : 1);
+        this.formulaBar.applyOptions();
+        break;
+      case 'nameBox': {
         const parts = this.formulaBarParts();
-        if (part === 'nameBox') parts.nameBox = visible;
-        else parts.input = visible;
-        o.formulaBar = parts.nameBox && parts.input ? true : parts.nameBox || parts.input ? parts : false;
+        o.formulaBar = visible ? (parts.input ? true : { nameBox: true, input: false }) : parts.input ? { nameBox: false } : false;
+        if (o.formulaBar && typeof o.formulaBar === 'object' && o.formulaBar.input === false) o.formulaBar = false;
         this.mountPanel(this.formulaBar.element, o.formulaBar !== false, o.toolbar === false ? 0 : 1);
         this.formulaBar.applyOptions();
         break;
@@ -512,7 +517,7 @@ export class Spreadsheet {
     const h = o.headers;
     switch (part) {
       case 'toolbar': return o.toolbar !== false;
-      case 'formulaBar': return o.formulaBar !== false;
+      case 'formulaBar': return this.formulaBarParts().input;
       case 'nameBox': return this.formulaBarParts().nameBox;
       case 'formulaInput': return this.formulaBarParts().input;
       case 'statusBar': return o.statusBar !== false;
@@ -530,7 +535,9 @@ export class Spreadsheet {
     const f = this.options.formulaBar;
     if (f === false) return { nameBox: false, input: false };
     if (f === undefined || f === true) return { nameBox: true, input: true };
-    return { nameBox: f.nameBox !== false, input: f.input !== false };
+    // Without the input there is nothing to show but the cell address, so the whole bar goes.
+    if (f.input === false) return { nameBox: false, input: false };
+    return { nameBox: f.nameBox !== false, input: true };
   }
 
   /** Whether the sheet's width is fixed to its columns (`fitContent: true | 'width'`). */

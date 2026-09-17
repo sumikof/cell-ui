@@ -222,7 +222,7 @@ check('headers and toolbar can be re-enabled at runtime', await page.evaluate(()
 // Custom column labels + hidden function input
 const namedHeaders = await page.evaluate(() => Array.from(document.getElementById('named').shadowRoot.querySelectorAll('.cui-header-col')).map((h) => h.textContent));
 check('column labels replace letters on fixed-width sheet', namedHeaders.join(',') === '品名,数量,単価,備考', namedHeaders.join(','));
-check('function input hidden, name box visible', await page.evaluate(() => { const r = document.getElementById('named').shadowRoot; return getComputedStyle(r.querySelector('.cui-formula-input')).display === 'none' && getComputedStyle(r.querySelector('.cui-namebox')).display !== 'none'; }));
+check('formula-input=false leaves only the table (no name box)', await page.evaluate(() => { const r = document.getElementById('named').shadowRoot; return !r.querySelector('.cui-formulabar') && !r.querySelector('.cui-toolbar') && !r.querySelector('.cui-statusbar') && r.querySelector('.cui-root').children.length === 1; }));
 await page.screenshot({ path: 'e2e-out/06-embed.png', fullPage: true });
 
 check('no page errors', errors.length === 0, errors.join(' | '));

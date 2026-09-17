@@ -47,7 +47,8 @@ const sheet = new Spreadsheet(container, { headers: false, toolbar: false, formu
 // 後から切り替える
 sheet.setVisible('toolbar', true);
 sheet.setVisible('rowHeaders', false);   // 'toolbar' | 'formulaBar' | 'nameBox' | 'formulaInput' | 'statusBar' | 'contextMenu' | 'headers' | 'rowHeaders' | 'columnHeaders' | 'gridlines' | 'fillHandle'
-sheet.setVisible('formulaInput', false); // 関数入力欄だけ消して名前ボックスは残す
+sheet.setVisible('formulaInput', false); // 関数入力欄を消す(セル位置の表示も一緒に消え、テーブルだけになる)
+sheet.setVisible('nameBox', false);      // セル位置(名前ボックス)だけ消す
 sheet.isVisible('headers');
 ```
 
@@ -82,7 +83,7 @@ sheet.model.resize(20, 8);      // 行数・列数を直接変更(はみ出し�
 | `rows` / `cols` | 1000 / 52 | 初期サイズ(貼り付け時などに自動で拡張) |
 | `defaultColumnWidth` / `defaultRowHeight` | 80 / 22 | px |
 | `defaultStyle` | Calibri 11pt | シート既定の書式 |
-| `toolbar` / `formulaBar` / `statusBar` / `contextMenu` | true | ツールバー・数式バー・ステータスバー・右クリックメニューの表示。`formulaBar: { nameBox: true, input: false }` で名前ボックスだけ残して関数入力欄を消すこともできる |
+| `toolbar` / `formulaBar` / `statusBar` / `contextMenu` | true | ツールバー・数式バー・ステータスバー・右クリックメニューの表示。`formulaBar: { nameBox: false }` で名前ボックス(セル位置)だけ消すこともできる。関数入力欄を消す(`{ input: false }`)とセル位置表示も含めてバー全体が消え、テーブル部分だけになる |
 | `columnLabels` | – | 列名ヘッダーを `['品名', '数量', …]` や `(col) => string` で差し替える。**固定幅(`fitContent: true` / `'width'`)の表のみ**有効で、ラベルの無い列は A, B, C… に戻る。セル参照(名前ボックス・クリップボード)は英字のまま |
 | `headers` | true | 行番号・列名ヘッダー。`false` で両方非表示、`{ rows: false }` / `{ cols: false }` で片方だけ非表示 |
 | `rowHeaderWidth` / `columnHeaderHeight` | 46 / 22 | ヘッダーのサイズ(px) |

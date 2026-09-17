@@ -106,12 +106,9 @@ export class CellUiElement extends HTMLElement {
   }
 
   private formulaBarAttr(): SpreadsheetOptions['formulaBar'] {
-    if (!this.bool('formula-bar')) return false; // formula-bar="false" hides the whole bar
-    const nameBox = this.bool('name-box');
-    const input = this.bool('formula-input');
-    if (nameBox && input) return true;
-    if (!nameBox && !input) return false;
-    return { nameBox, input };
+    // formula-bar="false" or formula-input="false" hide the whole bar (name box included).
+    if (!this.bool('formula-bar') || !this.bool('formula-input')) return false;
+    return this.bool('name-box') ? true : { nameBox: false };
   }
 
   /** `column-labels` accepts a JSON array or a comma-separated list. */
@@ -203,8 +200,10 @@ export class CellUiElement extends HTMLElement {
     const part = CellUiElement.PARTS[name];
     if (part) {
       if (part === 'formulaBar' || part === 'nameBox' || part === 'formulaInput') {
-        this.sheet.options.formulaBar = this.formulaBarAttr();
-        this.sheet.setVisible('formulaBar', this.sheet.options.formulaBar !== false);
+        const bar = this.formulaBarAttr();
+        this.sheet.setVisible('formulaInput', bar !== false); // mounts/unmounts the bar
+        this.sheet.options.formulaBar = bar; // keeps a { nameBox: false } setting
+        this.sheet.formulaBar.applyOptions();
         return;
       }
       if (part === 'headers' || part === 'rowHeaders' || part === 'columnHeaders') {
