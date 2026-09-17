@@ -1,4 +1,4 @@
-import { Spreadsheet, type SpreadsheetOptions } from './spreadsheet';
+import { Spreadsheet, type SpreadsheetOptions, type UiPart } from './spreadsheet';
 import type { SheetSnapshot } from './model/sheet';
 import cssText from './styles.css?inline';
 
@@ -32,8 +32,9 @@ export function injectStyles(target: Document | ShadowRoot = document): void {
  * ```
  *
  * Attributes: `rows`, `cols`, `locale`, `toolbar`, `formula-bar`, `status-bar`,
- * `context-menu`, `gridlines`, `fill-handle` (boolean attributes accept
- * "false" to disable), `fit-content` (`""`/`true`/`height`/`width` – size the
+ * `context-menu`, `gridlines`, `fill-handle`, `headers`, `row-headers`,
+ * `column-headers` (boolean attributes accept "false" to disable and can be
+ * changed at runtime), `fit-content` (`""`/`true`/`height`/`width` – size the
  * element to its rows/columns instead of a fixed height), `auto-expand`
  * (grow when Enter/Tab is pressed on the last row/column).
  * Methods: `appendRows(n)`, `appendColumns(n)`. Properties: `sheet`, `data` (get/set snapshot),
@@ -44,8 +45,20 @@ export function injectStyles(target: Document | ShadowRoot = document): void {
  */
 export class CellUiElement extends HTMLElement {
   static get observedAttributes(): string[] {
-    return ['rows', 'cols', 'locale'];
+    return ['rows', 'cols', 'locale', 'toolbar', 'formula-bar', 'status-bar', 'context-menu', 'gridlines', 'fill-handle', 'headers', 'row-headers', 'column-headers'];
   }
+
+  private static readonly PARTS: Record<string, UiPart> = {
+    toolbar: 'toolbar',
+    'formula-bar': 'formulaBar',
+    'status-bar': 'statusBar',
+    'context-menu': 'contextMenu',
+    gridlines: 'gridlines',
+    'fill-handle': 'fillHandle',
+    headers: 'headers',
+    'row-headers': 'rowHeaders',
+    'column-headers': 'columnHeaders',
+  };
 
   sheet: Spreadsheet | null = null;
   /** Extra options applied when the element connects (plugins, defaults, data…). */
@@ -89,6 +102,13 @@ export class CellUiElement extends HTMLElement {
     return !(v === 'false' || v === '0' || v === 'off');
   }
 
+  private headersAttr(): SpreadsheetOptions['headers'] {
+    const both = this.bool('headers');
+    const rows = this.bool('row-headers', both);
+    const cols = this.bool('column-headers', both);
+    return rows && cols ? true : { rows, cols };
+  }
+
   private fitAttr(): SpreadsheetOptions['fitContent'] {
     const v = this.getAttribute('fit-content');
     if (v === null || v === 'false') return false;
@@ -117,6 +137,7 @@ export class CellUiElement extends HTMLElement {
       fillHandle: this.bool('fill-handle'),
       fitContent: this.fitAttr(),
       autoExpand: this.bool('auto-expand', false),
+      headers: this.headersAttr(),
       ...this.options,
       data: this.pendingData ?? this.options.data,
     });
@@ -146,6 +167,18 @@ export class CellUiElement extends HTMLElement {
 
   attributeChangedCallback(name: string, _old: string | null, value: string | null): void {
     if (!this.sheet) return;
+    const part = CellUiElement.PARTS[name];
+    if (part) {
+      if (part === 'headers' || part === 'rowHeaders' || part === 'columnHeaders') {
+        // The three header attributes combine into one option.
+        this.sheet.options.headers = this.headersAttr();
+        this.sheet.grid.applyLayoutOptions();
+        this.sheet.grid.scheduleRender();
+      } else {
+        this.sheet.setVisible(part, this.bool(name));
+      }
+      return;
+    }
     if (name === 'rows' || name === 'cols') {
       const n = value === null ? undefined : parseInt(value, 10);
       if (n && n > 0) {

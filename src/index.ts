@@ -8,7 +8,7 @@ export * from './selection';
 export * from './i18n';
 export * from './plugins/api';
 export { Spreadsheet } from './spreadsheet';
-export type { SpreadsheetOptions, SpreadsheetEvents, EditMode, FillOptions } from './spreadsheet';
+export type { SpreadsheetOptions, SpreadsheetEvents, EditMode, FillOptions, UiPart } from './spreadsheet';
 export { GridView, ROW_HEADER_WIDTH, COL_HEADER_HEIGHT } from './render/grid';
 export { AxisLayout } from './render/layout';
 export { Toolbar } from './ui/toolbar';

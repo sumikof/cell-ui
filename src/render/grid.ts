@@ -4,6 +4,7 @@ import { normalizeRange, rangeContains, rangeSize, columnLabel, sameAddress } fr
 import { defaultAlign } from '../model/value';
 import { AxisLayout } from './layout';
 
+/** Default row-header width / column-header height in px (override with the `rowHeaderWidth` / `columnHeaderHeight` options). */
 export const ROW_HEADER_WIDTH = 46;
 export const COL_HEADER_HEIGHT = 22;
 const RESIZE_ZONE = 5;
@@ -43,6 +44,8 @@ export class GridView {
   readonly viewport: HTMLElement;
   readonly editor: HTMLTextAreaElement;
   private readonly corner: HTMLElement;
+  private readonly colWrap: HTMLElement;
+  private readonly rowWrap: HTMLElement;
   private readonly colHeader: HTMLElement;
   private readonly rowHeader: HTMLElement;
   private readonly canvas: HTMLElement;
@@ -78,19 +81,12 @@ export class GridView {
 
     this.root = el('div', 'cui-grid');
     this.corner = el('div', 'cui-corner', this.root);
-    this.corner.style.width = px(ROW_HEADER_WIDTH);
-    this.corner.style.height = px(COL_HEADER_HEIGHT);
-    const colWrap = el('div', 'cui-colheader-wrap', this.root);
-    colWrap.style.left = px(ROW_HEADER_WIDTH);
-    colWrap.style.height = px(COL_HEADER_HEIGHT);
-    this.colHeader = el('div', 'cui-colheader', colWrap);
-    const rowWrap = el('div', 'cui-rowheader-wrap', this.root);
-    rowWrap.style.top = px(COL_HEADER_HEIGHT);
-    rowWrap.style.width = px(ROW_HEADER_WIDTH);
-    this.rowHeader = el('div', 'cui-rowheader', rowWrap);
+    this.colWrap = el('div', 'cui-colheader-wrap', this.root);
+    this.colHeader = el('div', 'cui-colheader', this.colWrap);
+    this.rowWrap = el('div', 'cui-rowheader-wrap', this.root);
+    this.rowHeader = el('div', 'cui-rowheader', this.rowWrap);
     this.viewport = el('div', 'cui-viewport', this.root);
-    this.viewport.style.left = px(ROW_HEADER_WIDTH);
-    this.viewport.style.top = px(COL_HEADER_HEIGHT);
+    this.applyLayoutOptions();
     this.canvas = el('div', 'cui-canvas', this.viewport);
     this.gridlines = el('div', 'cui-gridlines', this.canvas);
     this.cellsLayer = el('div', 'cui-cells', this.canvas);
@@ -117,7 +113,7 @@ export class GridView {
   // ---------------------------------------------------------------------------
 
   mount(): void {
-    this.applyFit();
+    this.applyLayoutOptions();
     if (typeof ResizeObserver !== 'undefined') {
       this.resizeObserver = new ResizeObserver(() => this.scheduleRender());
       this.resizeObserver.observe(this.viewport);
@@ -282,8 +278,41 @@ export class GridView {
   // Rendering
   // ---------------------------------------------------------------------------
 
-  /** In `fitContent` mode, size the grid (and the component) to the sheet's rows/columns. */
-  private applyFit(): void {
+  /** Width of the row-header column (0 when row headers are hidden). */
+  get headerWidth(): number {
+    const o = this.sheet.options;
+    const h = o.headers;
+    const show = h === undefined || h === true || (typeof h === 'object' && h.rows !== false);
+    return show ? (o.rowHeaderWidth ?? ROW_HEADER_WIDTH) : 0;
+  }
+
+  /** Height of the column-header row (0 when column headers are hidden). */
+  get headerHeight(): number {
+    const o = this.sheet.options;
+    const h = o.headers;
+    const show = h === undefined || h === true || (typeof h === 'object' && h.cols !== false);
+    return show ? (o.columnHeaderHeight ?? COL_HEADER_HEIGHT) : 0;
+  }
+
+  /**
+   * Apply layout-affecting options: header visibility/size and `fitContent`.
+   * Called on every render so options can be changed at runtime.
+   */
+  applyLayoutOptions(): void {
+    const hw = this.headerWidth;
+    const hh = this.headerHeight;
+    this.corner.style.width = px(hw);
+    this.corner.style.height = px(hh);
+    this.corner.style.display = hw && hh ? '' : 'none';
+    this.colWrap.style.left = px(hw);
+    this.colWrap.style.height = px(hh);
+    this.colWrap.style.display = hh ? '' : 'none';
+    this.rowWrap.style.top = px(hh);
+    this.rowWrap.style.width = px(hw);
+    this.rowWrap.style.display = hw ? '' : 'none';
+    this.viewport.style.left = px(hw);
+    this.viewport.style.top = px(hh);
+
     const fit = this.sheet.options.fitContent;
     const rootEl = this.sheet.root;
     const fitH = fit === true || fit === 'height';
@@ -291,14 +320,14 @@ export class GridView {
     rootEl.classList.toggle('cui-root--fit-height', fitH);
     rootEl.classList.toggle('cui-root--fit-width', fitW);
     // 3px of slack keeps the fill handle / selection border of the last cell visible.
-    this.root.style.height = fitH ? px(COL_HEADER_HEIGHT + this.rows.total + 3) : '';
-    this.root.style.width = fitW ? px(ROW_HEADER_WIDTH + this.cols.total + 3) : '';
-    rootEl.style.width = fitW ? px(ROW_HEADER_WIDTH + this.cols.total + 3 + 2) : '';
+    this.root.style.height = fitH ? px(hh + this.rows.total + 3) : '';
+    this.root.style.width = fitW ? px(hw + this.cols.total + 3) : '';
+    rootEl.style.width = fitW ? px(hw + this.cols.total + 3 + 2) : '';
   }
 
   render(): void {
     const vp = this.viewport;
-    this.applyFit();
+    this.applyLayoutOptions();
     this.canvas.style.width = px(this.cols.total);
     this.canvas.style.height = px(this.rows.total);
     const [r0, r1] = this.visibleRows;
@@ -467,6 +496,8 @@ export class GridView {
     const fullRows = sel.mode === 'rows' || sel.mode === 'all';
     this.colHeader.style.width = px(this.cols.total);
     this.rowHeader.style.height = px(this.rows.total);
+    if (this.headerHeight === 0) c1 = c0 - 1;
+    if (this.headerWidth === 0) r1 = r0 - 1;
 
     const neededC = new Set<number>();
     for (let c = c0; c <= c1; c++) {
@@ -769,7 +800,7 @@ export class GridView {
     if (this.sheet.isEditing && !this.sheet.commitEdit()) return;
     if (hit.resize) {
       const guide = el('div', 'cui-resize-guide cui-resize-guide-v', this.root);
-      guide.style.left = px(ROW_HEADER_WIDTH + this.cols.offset(hit.index + 1) - this.viewport.scrollLeft);
+      guide.style.left = px(this.headerWidth + this.cols.offset(hit.index + 1) - this.viewport.scrollLeft);
       this.drag = { kind: 'resize-col', index: hit.index, startX: e.clientX, startSize: this.cols.size(hit.index), guide };
       return;
     }
@@ -789,7 +820,7 @@ export class GridView {
     if (this.sheet.isEditing && !this.sheet.commitEdit()) return;
     if (hit.resize) {
       const guide = el('div', 'cui-resize-guide cui-resize-guide-h', this.root);
-      guide.style.top = px(COL_HEADER_HEIGHT + this.rows.offset(hit.index + 1) - this.viewport.scrollTop);
+      guide.style.top = px(this.headerHeight + this.rows.offset(hit.index + 1) - this.viewport.scrollTop);
       this.drag = { kind: 'resize-row', index: hit.index, startY: e.clientY, startSize: this.rows.size(hit.index), guide };
       return;
     }
@@ -847,12 +878,12 @@ export class GridView {
         break;
       case 'resize-col': {
         const size = Math.max(0, drag.startSize + clientX - drag.startX);
-        drag.guide.style.left = px(ROW_HEADER_WIDTH + this.cols.offset(drag.index) + size - this.viewport.scrollLeft);
+        drag.guide.style.left = px(this.headerWidth + this.cols.offset(drag.index) + size - this.viewport.scrollLeft);
         break;
       }
       case 'resize-row': {
         const size = Math.max(0, drag.startSize + clientY - drag.startY);
-        drag.guide.style.top = px(COL_HEADER_HEIGHT + this.rows.offset(drag.index) + size - this.viewport.scrollTop);
+        drag.guide.style.top = px(this.headerHeight + this.rows.offset(drag.index) + size - this.viewport.scrollTop);
         break;
       }
       case 'fill': {

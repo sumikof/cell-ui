@@ -38,6 +38,20 @@ sheet.load(snapshot);            // 復元
 
 コンテナは高さを持つ要素にしてください(`.cui-root` は `height: 100%` で親を埋めます)。`fitContent: true` を指定した場合は逆に、行数・列数からコンポーネントの大きさが決まるので親の高さは不要です。
 
+### UI 部品の表示/非表示
+
+```ts
+// 素の表だけを表示する
+const sheet = new Spreadsheet(container, { headers: false, toolbar: false, formulaBar: false, statusBar: false, contextMenu: false });
+
+// 後から切り替える
+sheet.setVisible('toolbar', true);
+sheet.setVisible('rowHeaders', false);   // 'toolbar' | 'formulaBar' | 'statusBar' | 'contextMenu' | 'headers' | 'rowHeaders' | 'columnHeaders' | 'gridlines' | 'fillHandle'
+sheet.isVisible('headers');
+```
+
+Web Component では `headers="false"` `row-headers="false"` `column-headers="false"` `toolbar="false"` `formula-bar="false"` `status-bar="false"` `context-menu="false"` `gridlines="false"` `fill-handle="false"` の属性で指定でき、属性を書き換えると即座に反映されます。ヘッダーを消しても選択・入力・コピー&ペーストはそのまま使え、行・列のサイズ変更や全行/全列の選択は API(`setColumnWidth` / `selection.selectRows` など)から行えます。ツールバーの中身だけを差し替えたい場合は `defaults: { toolbar: false }` で既定のボタンを外し、`sheet.toolbar.add()` で独自のボタンを登録してください。
+
 ### 小さな固定サイズの表(例: 10 行 × 5 列)と行・列の追加
 
 ```ts
@@ -58,7 +72,9 @@ sheet.model.resize(20, 8);      // 行数・列数を直接変更(はみ出し�
 | `rows` / `cols` | 1000 / 52 | 初期サイズ(貼り付け時などに自動で拡張) |
 | `defaultColumnWidth` / `defaultRowHeight` | 80 / 22 | px |
 | `defaultStyle` | Calibri 11pt | シート既定の書式 |
-| `toolbar` / `formulaBar` / `statusBar` / `contextMenu` | true | UI の表示 |
+| `toolbar` / `formulaBar` / `statusBar` / `contextMenu` | true | ツールバー・数式バー・ステータスバー・右クリックメニューの表示 |
+| `headers` | true | 行番号・列名ヘッダー。`false` で両方非表示、`{ rows: false }` / `{ cols: false }` で片方だけ非表示 |
+| `rowHeaderWidth` / `columnHeaderHeight` | 46 / 22 | ヘッダーのサイズ(px) |
 | `showGridlines` / `fillHandle` | true | 枠線とフィルハンドル |
 | `locale` | ブラウザ言語 | `'ja'` / `'en'`(`registerLocale` で追加可能) |
 | `fitContent` | false | `true` / `'height'` / `'width'`: 行数・列数に合わせてコンポーネント自体のサイズを決める(10行5列のような小さな固定表向け。行・列を追加すると自動で広がる) |

@@ -29,7 +29,26 @@
   </p>
   <cell-ui-sheet id="small" rows="10" cols="5" locale="ja" fit-content auto-expand toolbar="false" status-bar="false"></cell-ui-sheet>
 
+  <h2>D. ヘッダーもメニューも無い素の表(<code>headers="false" toolbar="false" formula-bar="false" status-bar="false"</code>)</h2>
+  <p>
+    <label><input type="checkbox" id="tglHeaders"> ヘッダー</label>
+    <label><input type="checkbox" id="tglToolbar"> ツールバー</label>
+    <label><input type="checkbox" id="tglFormula"> 数式バー</label>
+    <label><input type="checkbox" id="tglStatus"> ステータスバー</label>
+    (後から切り替え可能)
+  </p>
+  <cell-ui-sheet id="bare" rows="6" cols="4" locale="ja" fit-content headers="false" toolbar="false" formula-bar="false" status-bar="false"></cell-ui-sheet>
+
   <script>
+    const bare = document.getElementById('bare');
+    bare.whenReady.then((sheet) => {
+      ['品名', '数量', '単価', '備考'].forEach((v, c) => sheet.model.setCell(0, c, { value: v, style: { bold: true, backgroundColor: '#f2f2f2', hAlign: 'center' } }));
+    });
+    const toggles = { tglHeaders: 'headers', tglToolbar: 'toolbar', tglFormula: 'formula-bar', tglStatus: 'status-bar' };
+    for (const [id, attr] of Object.entries(toggles)) {
+      document.getElementById(id).addEventListener('change', (e) => bare.setAttribute(attr, e.target.checked ? 'true' : 'false'));
+    }
+
     const small = document.getElementById('small');
     document.getElementById('addRow').addEventListener('click', () => small.appendRows(1));
     document.getElementById('addCol').addEventListener('click', () => small.appendColumns(1));

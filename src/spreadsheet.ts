@@ -33,6 +33,17 @@ export interface SpreadsheetOptions extends SheetModelOptions {
   showGridlines?: boolean;
   /** Show the drag-to-fill handle (default true). */
   fillHandle?: boolean;
+  /**
+   * Row-number / column-letter headers (default true). `false` hides both;
+   * `{ rows: false }` hides only the row numbers, `{ cols: false }` only the
+   * column letters. Without headers, rows/columns can still be resized and
+   * selected through the API.
+   */
+  headers?: boolean | { rows?: boolean; cols?: boolean };
+  /** Width of the row-header column in px (default 46). */
+  rowHeaderWidth?: number;
+  /** Height of the column-header row in px (default 22). */
+  columnHeaderHeight?: number;
   /** Apply column widths that come with pasted HTML tables when pasting into a single cell (default false). */
   pasteColumnWidths?: boolean;
   /**
@@ -66,6 +77,9 @@ export interface SpreadsheetEvents extends Record<string, unknown> {
   fill: { source: CellRange; target: CellRange };
   destroy: undefined;
 }
+
+/** UI parts that can be shown/hidden at runtime with `Spreadsheet.setVisible`. */
+export type UiPart = 'toolbar' | 'formulaBar' | 'statusBar' | 'contextMenu' | 'rowHeaders' | 'columnHeaders' | 'headers' | 'gridlines' | 'fillHandle';
 
 export interface FillOptions {
   /** Extrapolate numeric/“Item1”-style series (default true, like the fill handle). */
@@ -420,6 +434,79 @@ export class Spreadsheet {
     else this.selection.setActive(address);
     this.tabStartCol = null;
     this.grid.scrollIntoView(extend ? address : this.selection.active);
+  }
+
+  /**
+   * Show or hide a UI part after construction. Equivalent to the matching
+   * constructor option (`toolbar`, `formulaBar`, `statusBar`, `contextMenu`,
+   * `headers`, `showGridlines`, `fillHandle`).
+   */
+  setVisible(part: UiPart, visible: boolean): void {
+    const o = this.options;
+    switch (part) {
+      case 'toolbar':
+        o.toolbar = visible;
+        this.mountPanel(this.toolbar.element, visible, 0);
+        break;
+      case 'formulaBar':
+        o.formulaBar = visible;
+        this.mountPanel(this.formulaBar.element, visible, o.toolbar === false ? 0 : 1);
+        break;
+      case 'statusBar':
+        o.statusBar = visible;
+        this.mountPanel(this.statusBar.element, visible, this.root.children.length);
+        break;
+      case 'contextMenu':
+        o.contextMenu = visible;
+        if (!visible) this.contextMenu.hide();
+        break;
+      case 'headers':
+        o.headers = visible;
+        break;
+      case 'rowHeaders':
+      case 'columnHeaders': {
+        const h = o.headers;
+        const cur = { rows: h === undefined || h === true || (typeof h === 'object' && h.rows !== false), cols: h === undefined || h === true || (typeof h === 'object' && h.cols !== false) };
+        if (part === 'rowHeaders') cur.rows = visible;
+        else cur.cols = visible;
+        o.headers = cur.rows && cur.cols ? true : { rows: cur.rows, cols: cur.cols };
+        break;
+      }
+      case 'gridlines':
+        o.showGridlines = visible;
+        break;
+      case 'fillHandle':
+        o.fillHandle = visible;
+        break;
+    }
+    this.grid.applyLayoutOptions();
+    this.refreshAll();
+  }
+
+  isVisible(part: UiPart): boolean {
+    const o = this.options;
+    const h = o.headers;
+    switch (part) {
+      case 'toolbar': return o.toolbar !== false;
+      case 'formulaBar': return o.formulaBar !== false;
+      case 'statusBar': return o.statusBar !== false;
+      case 'contextMenu': return o.contextMenu !== false;
+      case 'gridlines': return o.showGridlines !== false;
+      case 'fillHandle': return o.fillHandle !== false;
+      case 'rowHeaders': return this.grid.headerWidth > 0;
+      case 'columnHeaders': return this.grid.headerHeight > 0;
+      case 'headers': return h !== false && this.grid.headerWidth > 0 && this.grid.headerHeight > 0;
+    }
+  }
+
+  private mountPanel(element: HTMLElement, visible: boolean, index: number): void {
+    if (!visible) {
+      element.remove();
+      return;
+    }
+    if (element.parentElement === this.root) return;
+    const ref = this.root.children[Math.min(index, this.root.children.length)] ?? null;
+    this.root.insertBefore(element, ref);
   }
 
   /** Append rows at the bottom (keeps the selection, re-renders). */
