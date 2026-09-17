@@ -158,6 +158,7 @@
   overflow: hidden;
 }
 .cui-formula-input:focus { background: #fbfffc; }
+.cui-formulabar--namebox-only .cui-namebox { border-right: 0; }
 
 /* Grid -------------------------------------------------------------------- */
 .cui-grid { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; background: #fff; }

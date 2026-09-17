@@ -46,11 +46,21 @@ const sheet = new Spreadsheet(container, { headers: false, toolbar: false, formu
 
 // 後から切り替える
 sheet.setVisible('toolbar', true);
-sheet.setVisible('rowHeaders', false);   // 'toolbar' | 'formulaBar' | 'statusBar' | 'contextMenu' | 'headers' | 'rowHeaders' | 'columnHeaders' | 'gridlines' | 'fillHandle'
+sheet.setVisible('rowHeaders', false);   // 'toolbar' | 'formulaBar' | 'nameBox' | 'formulaInput' | 'statusBar' | 'contextMenu' | 'headers' | 'rowHeaders' | 'columnHeaders' | 'gridlines' | 'fillHandle'
+sheet.setVisible('formulaInput', false); // 関数入力欄だけ消して名前ボックスは残す
 sheet.isVisible('headers');
 ```
 
-Web Component では `headers="false"` `row-headers="false"` `column-headers="false"` `toolbar="false"` `formula-bar="false"` `status-bar="false"` `context-menu="false"` `gridlines="false"` `fill-handle="false"` の属性で指定でき、属性を書き換えると即座に反映されます。ヘッダーを消しても選択・入力・コピー&ペーストはそのまま使え、行・列のサイズ変更や全行/全列の選択は API(`setColumnWidth` / `selection.selectRows` など)から行えます。ツールバーの中身だけを差し替えたい場合は `defaults: { toolbar: false }` で既定のボタンを外し、`sheet.toolbar.add()` で独自のボタンを登録してください。
+### 列名の差し替え(固定幅の表)
+
+```ts
+const sheet = new Spreadsheet(container, { rows: 10, cols: 4, fitContent: true, columnLabels: ['品名', '数量', '単価', '備考'] });
+sheet.setColumnLabels(['Item', 'Qty', 'Price']);   // 後から変更。足りない列は D, E… のまま
+```
+
+Web Component では `column-labels="品名,数量,単価,備考"`(または JSON 配列)で指定します。スクロールする通常のシート(`fitContent` 無し)では列が動的に増減するため無視され、コンソールに警告を出します。
+
+Web Component では `headers="false"` `row-headers="false"` `column-headers="false"` `toolbar="false"` `formula-bar="false"` `name-box="false"` `formula-input="false"` `status-bar="false"` `context-menu="false"` `gridlines="false"` `fill-handle="false"` の属性で指定でき、属性を書き換えると即座に反映されます。ヘッダーを消しても選択・入力・コピー&ペーストはそのまま使え、行・列のサイズ変更や全行/全列の選択は API(`setColumnWidth` / `selection.selectRows` など)から行えます。ツールバーの中身だけを差し替えたい場合は `defaults: { toolbar: false }` で既定のボタンを外し、`sheet.toolbar.add()` で独自のボタンを登録してください。
 
 ### 小さな固定サイズの表(例: 10 行 × 5 列)と行・列の追加
 
@@ -72,7 +82,8 @@ sheet.model.resize(20, 8);      // 行数・列数を直接変更(はみ出し�
 | `rows` / `cols` | 1000 / 52 | 初期サイズ(貼り付け時などに自動で拡張) |
 | `defaultColumnWidth` / `defaultRowHeight` | 80 / 22 | px |
 | `defaultStyle` | Calibri 11pt | シート既定の書式 |
-| `toolbar` / `formulaBar` / `statusBar` / `contextMenu` | true | ツールバー・数式バー・ステータスバー・右クリックメニューの表示 |
+| `toolbar` / `formulaBar` / `statusBar` / `contextMenu` | true | ツールバー・数式バー・ステータスバー・右クリックメニューの表示。`formulaBar: { nameBox: true, input: false }` で名前ボックスだけ残して関数入力欄を消すこともできる |
+| `columnLabels` | – | 列名ヘッダーを `['品名', '数量', …]` や `(col) => string` で差し替える。**固定幅(`fitContent: true` / `'width'`)の表のみ**有効で、ラベルの無い列は A, B, C… に戻る。セル参照(名前ボックス・クリップボード)は英字のまま |
 | `headers` | true | 行番号・列名ヘッダー。`false` で両方非表示、`{ rows: false }` / `{ cols: false }` で片方だけ非表示 |
 | `rowHeaderWidth` / `columnHeaderHeight` | 46 / 22 | ヘッダーのサイズ(px) |
 | `showGridlines` / `fillHandle` | true | 枠線とフィルハンドル |

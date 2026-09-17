@@ -1,6 +1,6 @@
 import { SheetModel, type SheetModelOptions, type SheetSnapshot } from './model/sheet';
 import type { CellAddress, CellData, CellRange, CellStyle, CellValue } from './model/types';
-import { addressToA1, iterateRange, normalizeRange, rangeSize, rangeContains } from './model/address';
+import { addressToA1, columnLabel, iterateRange, normalizeRange, rangeSize, rangeContains } from './model/address';
 import { editableText, formatValue, parseInputValue } from './model/value';
 import { Emitter } from './model/emitter';
 import { Selection } from './selection';
@@ -24,8 +24,12 @@ export type EditMode = 'enter' | 'edit' | 'formula';
 export interface SpreadsheetOptions extends SheetModelOptions {
   /** Show the formatting toolbar (default true). */
   toolbar?: boolean;
-  /** Show the name box / formula bar (default true). */
-  formulaBar?: boolean;
+  /**
+   * Show the name box / formula bar (default true). An object shows only some
+   * of its parts: `{ nameBox: true, input: false }` keeps the A1 name box but
+   * hides the function/cell-content input.
+   */
+  formulaBar?: boolean | { nameBox?: boolean; input?: boolean };
   /** Show the status bar with selection statistics (default true). */
   statusBar?: boolean;
   /** Enable the right-click context menu (default true). */
@@ -40,6 +44,15 @@ export interface SpreadsheetOptions extends SheetModelOptions {
    * selected through the API.
    */
   headers?: boolean | { rows?: boolean; cols?: boolean };
+  /**
+   * Custom column header labels, e.g. `['品名', '数量', '単価']`, used instead of
+   * the Excel letters A, B, C…. Only applied to fixed-width sheets
+   * (`fitContent: true` or `'width'`), where the column set is a stable part
+   * of the layout; on a scrolling sheet it is ignored with a warning. Columns
+   * without a label (or beyond the array) fall back to their letter. Cell
+   * references (name box, clipboard) keep using letters.
+   */
+  columnLabels?: (string | undefined)[] | ((col: number) => string | undefined);
   /** Width of the row-header column in px (default 46). */
   rowHeaderWidth?: number;
   /** Height of the column-header row in px (default 22). */
@@ -79,7 +92,7 @@ export interface SpreadsheetEvents extends Record<string, unknown> {
 }
 
 /** UI parts that can be shown/hidden at runtime with `Spreadsheet.setVisible`. */
-export type UiPart = 'toolbar' | 'formulaBar' | 'statusBar' | 'contextMenu' | 'rowHeaders' | 'columnHeaders' | 'headers' | 'gridlines' | 'fillHandle';
+export type UiPart = 'toolbar' | 'formulaBar' | 'nameBox' | 'formulaInput' | 'statusBar' | 'contextMenu' | 'rowHeaders' | 'columnHeaders' | 'headers' | 'gridlines' | 'fillHandle';
 
 export interface FillOptions {
   /** Extrapolate numeric/“Item1”-style series (default true, like the fill handle). */
@@ -451,7 +464,18 @@ export class Spreadsheet {
       case 'formulaBar':
         o.formulaBar = visible;
         this.mountPanel(this.formulaBar.element, visible, o.toolbar === false ? 0 : 1);
+        this.formulaBar.applyOptions();
         break;
+      case 'nameBox':
+      case 'formulaInput': {
+        const parts = this.formulaBarParts();
+        if (part === 'nameBox') parts.nameBox = visible;
+        else parts.input = visible;
+        o.formulaBar = parts.nameBox && parts.input ? true : parts.nameBox || parts.input ? parts : false;
+        this.mountPanel(this.formulaBar.element, o.formulaBar !== false, o.toolbar === false ? 0 : 1);
+        this.formulaBar.applyOptions();
+        break;
+      }
       case 'statusBar':
         o.statusBar = visible;
         this.mountPanel(this.statusBar.element, visible, this.root.children.length);
@@ -489,6 +513,8 @@ export class Spreadsheet {
     switch (part) {
       case 'toolbar': return o.toolbar !== false;
       case 'formulaBar': return o.formulaBar !== false;
+      case 'nameBox': return this.formulaBarParts().nameBox;
+      case 'formulaInput': return this.formulaBarParts().input;
       case 'statusBar': return o.statusBar !== false;
       case 'contextMenu': return o.contextMenu !== false;
       case 'gridlines': return o.showGridlines !== false;
@@ -497,6 +523,44 @@ export class Spreadsheet {
       case 'columnHeaders': return this.grid.headerHeight > 0;
       case 'headers': return h !== false && this.grid.headerWidth > 0 && this.grid.headerHeight > 0;
     }
+  }
+
+  /** Which parts of the formula bar are enabled by the current options. */
+  formulaBarParts(): { nameBox: boolean; input: boolean } {
+    const f = this.options.formulaBar;
+    if (f === false) return { nameBox: false, input: false };
+    if (f === undefined || f === true) return { nameBox: true, input: true };
+    return { nameBox: f.nameBox !== false, input: f.input !== false };
+  }
+
+  /** Whether the sheet's width is fixed to its columns (`fitContent: true | 'width'`). */
+  get isFixedWidth(): boolean {
+    const f = this.options.fitContent;
+    return f === true || f === 'width';
+  }
+
+  private warnedColumnLabels = false;
+
+  /** Header label for a column: custom label on fixed-width sheets, otherwise the Excel letter. */
+  columnLabel(col: number): string {
+    const labels = this.options.columnLabels;
+    if (labels) {
+      if (this.isFixedWidth) {
+        const label = typeof labels === 'function' ? labels(col) : labels[col];
+        if (label !== undefined && label !== null && label !== '') return label;
+      } else if (!this.warnedColumnLabels) {
+        this.warnedColumnLabels = true;
+        console.warn('[cell-ui] columnLabels is only applied to fixed-width sheets (fitContent: true or "width").');
+      }
+    }
+    return columnLabel(col);
+  }
+
+  /** Replace the custom column labels at runtime (fixed-width sheets only). */
+  setColumnLabels(labels: SpreadsheetOptions['columnLabels']): void {
+    this.options.columnLabels = labels;
+    this.warnedColumnLabels = false;
+    this.grid.scheduleRender();
   }
 
   private mountPanel(element: HTMLElement, visible: boolean, index: number): void {

@@ -219,6 +219,10 @@ await page.click('#tglHeaders');
 await page.click('#tglToolbar');
 await page.waitForTimeout(50);
 check('headers and toolbar can be re-enabled at runtime', await page.evaluate(() => { const r = document.getElementById('bare').shadowRoot; return !!r.querySelector('.cui-toolbar') && getComputedStyle(r.querySelector('.cui-colheader-wrap')).display !== 'none' && r.querySelectorAll('.cui-header-row').length > 0; }));
+// Custom column labels + hidden function input
+const namedHeaders = await page.evaluate(() => Array.from(document.getElementById('named').shadowRoot.querySelectorAll('.cui-header-col')).map((h) => h.textContent));
+check('column labels replace letters on fixed-width sheet', namedHeaders.join(',') === '品名,数量,単価,備考', namedHeaders.join(','));
+check('function input hidden, name box visible', await page.evaluate(() => { const r = document.getElementById('named').shadowRoot; return getComputedStyle(r.querySelector('.cui-formula-input')).display === 'none' && getComputedStyle(r.querySelector('.cui-namebox')).display !== 'none'; }));
 await page.screenshot({ path: 'e2e-out/06-embed.png', fullPage: true });
 
 check('no page errors', errors.length === 0, errors.join(' | '));

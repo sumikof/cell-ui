@@ -32,9 +32,10 @@ export function injectStyles(target: Document | ShadowRoot = document): void {
  * ```
  *
  * Attributes: `rows`, `cols`, `locale`, `toolbar`, `formula-bar`, `status-bar`,
- * `context-menu`, `gridlines`, `fill-handle`, `headers`, `row-headers`,
- * `column-headers` (boolean attributes accept "false" to disable and can be
- * changed at runtime), `fit-content` (`""`/`true`/`height`/`width` – size the
+ * `name-box`, `formula-input`, `context-menu`, `gridlines`, `fill-handle`,
+ * `headers`, `row-headers`, `column-headers` (boolean attributes accept
+ * "false" to disable and can be changed at runtime), `column-labels`
+ * (`"品名,数量,単価"` or a JSON array; fixed-width sheets only), `fit-content` (`""`/`true`/`height`/`width` – size the
  * element to its rows/columns instead of a fixed height), `auto-expand`
  * (grow when Enter/Tab is pressed on the last row/column).
  * Methods: `appendRows(n)`, `appendColumns(n)`. Properties: `sheet`, `data` (get/set snapshot),
@@ -45,12 +46,14 @@ export function injectStyles(target: Document | ShadowRoot = document): void {
  */
 export class CellUiElement extends HTMLElement {
   static get observedAttributes(): string[] {
-    return ['rows', 'cols', 'locale', 'toolbar', 'formula-bar', 'status-bar', 'context-menu', 'gridlines', 'fill-handle', 'headers', 'row-headers', 'column-headers'];
+    return ['rows', 'cols', 'locale', 'toolbar', 'formula-bar', 'name-box', 'formula-input', 'status-bar', 'context-menu', 'gridlines', 'fill-handle', 'headers', 'row-headers', 'column-headers', 'column-labels'];
   }
 
   private static readonly PARTS: Record<string, UiPart> = {
     toolbar: 'toolbar',
     'formula-bar': 'formulaBar',
+    'name-box': 'nameBox',
+    'formula-input': 'formulaInput',
     'status-bar': 'statusBar',
     'context-menu': 'contextMenu',
     gridlines: 'gridlines',
@@ -102,6 +105,31 @@ export class CellUiElement extends HTMLElement {
     return !(v === 'false' || v === '0' || v === 'off');
   }
 
+  private formulaBarAttr(): SpreadsheetOptions['formulaBar'] {
+    if (!this.bool('formula-bar')) return false; // formula-bar="false" hides the whole bar
+    const nameBox = this.bool('name-box');
+    const input = this.bool('formula-input');
+    if (nameBox && input) return true;
+    if (!nameBox && !input) return false;
+    return { nameBox, input };
+  }
+
+  /** `column-labels` accepts a JSON array or a comma-separated list. */
+  private columnLabelsAttr(): SpreadsheetOptions['columnLabels'] {
+    const v = this.getAttribute('column-labels');
+    if (v === null || v.trim() === '') return undefined;
+    const t = v.trim();
+    if (t.startsWith('[')) {
+      try {
+        const arr = JSON.parse(t);
+        if (Array.isArray(arr)) return arr.map((x) => (x === null || x === undefined ? undefined : String(x)));
+      } catch {
+        /* fall through to CSV */
+      }
+    }
+    return t.split(',').map((s) => s.trim() || undefined);
+  }
+
   private headersAttr(): SpreadsheetOptions['headers'] {
     const both = this.bool('headers');
     const rows = this.bool('row-headers', both);
@@ -130,7 +158,8 @@ export class CellUiElement extends HTMLElement {
       cols: this.num('cols'),
       locale: this.getAttribute('locale') ?? undefined,
       toolbar: this.bool('toolbar'),
-      formulaBar: this.bool('formula-bar'),
+      formulaBar: this.formulaBarAttr(),
+      columnLabels: this.columnLabelsAttr(),
       statusBar: this.bool('status-bar'),
       contextMenu: this.bool('context-menu'),
       showGridlines: this.bool('gridlines'),
@@ -167,8 +196,17 @@ export class CellUiElement extends HTMLElement {
 
   attributeChangedCallback(name: string, _old: string | null, value: string | null): void {
     if (!this.sheet) return;
+    if (name === 'column-labels') {
+      this.sheet.setColumnLabels(this.columnLabelsAttr());
+      return;
+    }
     const part = CellUiElement.PARTS[name];
     if (part) {
+      if (part === 'formulaBar' || part === 'nameBox' || part === 'formulaInput') {
+        this.sheet.options.formulaBar = this.formulaBarAttr();
+        this.sheet.setVisible('formulaBar', this.sheet.options.formulaBar !== false);
+        return;
+      }
       if (part === 'headers' || part === 'rowHeaders' || part === 'columnHeaders') {
         // The three header attributes combine into one option.
         this.sheet.options.headers = this.headersAttr();

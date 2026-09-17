@@ -1,6 +1,6 @@
 import type { Spreadsheet } from '../spreadsheet';
 import type { BorderStyle, CellAddress, CellData, CellRange, CellStyle } from '../model/types';
-import { normalizeRange, rangeContains, rangeSize, columnLabel, sameAddress } from '../model/address';
+import { normalizeRange, rangeContains, rangeSize, sameAddress } from '../model/address';
 import { defaultAlign } from '../model/value';
 import { AxisLayout } from './layout';
 
@@ -513,7 +513,7 @@ export class GridView {
       h.style.left = px(this.cols.offset(c));
       h.style.width = px(w);
       h.style.display = w === 0 ? 'none' : '';
-      h.textContent = columnLabel(c);
+      h.textContent = this.sheet.columnLabel(c);
       const inSel = c >= range.start.col && c <= range.end.col;
       h.classList.toggle('cui-header--selected', inSel);
       h.classList.toggle('cui-header--full', inSel && fullCols);

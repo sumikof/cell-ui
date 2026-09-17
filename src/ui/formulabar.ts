@@ -6,6 +6,7 @@ export class FormulaBar {
   readonly element: HTMLElement;
   readonly nameBox: HTMLInputElement;
   readonly input: HTMLTextAreaElement;
+  private readonly fx: HTMLElement;
 
   constructor(private readonly sheet: Spreadsheet) {
     this.element = document.createElement('div');
@@ -23,7 +24,9 @@ export class FormulaBar {
     this.input.rows = 1;
     this.input.setAttribute('aria-label', sheet.strings.formulaBar);
     this.input.spellcheck = false;
+    this.fx = fx;
     this.element.append(this.nameBox, fx, this.input);
+    this.applyOptions();
 
     this.nameBox.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
@@ -77,6 +80,15 @@ export class FormulaBar {
         // let the browser handle undo inside the text field
       }
     });
+  }
+
+  /** Show/hide the name box and the function input according to `options.formulaBar`. */
+  applyOptions(): void {
+    const parts = this.sheet.formulaBarParts();
+    this.nameBox.style.display = parts.nameBox ? '' : 'none';
+    this.fx.style.display = parts.input ? '' : 'none';
+    this.input.style.display = parts.input ? '' : 'none';
+    this.element.classList.toggle('cui-formulabar--namebox-only', parts.nameBox && !parts.input);
   }
 
   /** Mirror the current cell (or editor text) into the bar. */

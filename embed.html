@@ -39,6 +39,9 @@
   </p>
   <cell-ui-sheet id="bare" rows="6" cols="4" locale="ja" fit-content headers="false" toolbar="false" formula-bar="false" status-bar="false"></cell-ui-sheet>
 
+  <h2>E. 固定幅の表で列名を差し替え(<code>column-labels</code>)、関数入力欄だけ非表示(<code>formula-input="false"</code>)</h2>
+  <cell-ui-sheet id="named" rows="5" cols="4" locale="ja" fit-content column-labels="品名,数量,単価,備考" formula-input="false" toolbar="false" status-bar="false"></cell-ui-sheet>
+
   <script>
     const bare = document.getElementById('bare');
     bare.whenReady.then((sheet) => {
