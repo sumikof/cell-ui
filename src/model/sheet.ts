@@ -498,6 +498,16 @@ export class SheetModel {
     });
   }
 
+  /** Add empty rows at the bottom of the sheet. */
+  appendRows(count = 1): void {
+    this.insertRows(this._rows, count);
+  }
+
+  /** Add empty columns at the right of the sheet. */
+  appendColumns(count = 1): void {
+    this.insertColumns(this._cols, count);
+  }
+
   insertColumns(at: number, count = 1): void {
     if (count <= 0) return;
     this.mutate('insertColumns', () => {

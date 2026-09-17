@@ -30,6 +30,11 @@
 }
 .cui-root *, .cui-root *::before, .cui-root *::after { box-sizing: border-box; }
 
+.cui-root--fit-height { height: auto; min-height: 0; }
+.cui-root--fit-height .cui-grid { flex: none; }
+.cui-root--fit-width { width: auto; }
+.cui-root--fit-height .cui-viewport, .cui-root--fit-width .cui-viewport { overflow: hidden; }
+
 /* Toolbar --------------------------------------------------------------- */
 .cui-toolbar {
   display: flex;

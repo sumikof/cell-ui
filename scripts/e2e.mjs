@@ -186,7 +186,22 @@ check('typing works inside web component', (await page.evaluate(() => document.g
 await wcHandle.asElement().click({ button: 'right', position: { x: 30, y: 10 } });
 check('context menu opens inside shadow root', await page.evaluate(() => !!document.getElementById('wc').shadowRoot.querySelector('.cui-menu')));
 await page.keyboard.press('Escape');
-await page.screenshot({ path: 'e2e-out/06-embed.png' });
+// Fixed 10x5 table that grows
+const smallH0 = await page.evaluate(() => document.getElementById('small').getBoundingClientRect().height);
+check('fit-content element height matches 10 rows', Math.abs(smallH0 - (22 + 10 * 22 + 3 + 2 + 24)) < 3, String(smallH0));
+await page.click('#addRow');
+await page.waitForTimeout(50);
+const smallH1 = await page.evaluate(() => document.getElementById('small').getBoundingClientRect().height);
+check('appendRows grows the element', smallH1 - smallH0 >= 21 && smallH1 - smallH0 <= 23, `${smallH0} -> ${smallH1}`);
+await page.click('#addCol');
+check('appendColumns adds a column', (await page.evaluate(() => document.getElementById('small').sheet.model.colCount)) === 6);
+const smallVp = await page.evaluateHandle(() => document.getElementById('small').shadowRoot.querySelector('.cui-viewport'));
+await smallVp.asElement().click({ position: { x: 20, y: 10 } });
+await page.evaluate(() => document.getElementById('small').sheet.selection.setActive({ row: 10, col: 0 }));
+await page.keyboard.type('end');
+await page.keyboard.press('Enter');
+check('auto-expand adds a row on Enter at last row', (await page.evaluate(() => document.getElementById('small').sheet.model.rowCount)) === 12);
+await page.screenshot({ path: 'e2e-out/06-embed.png', fullPage: true });
 
 check('no page errors', errors.length === 0, errors.join(' | '));
 await browser.close();

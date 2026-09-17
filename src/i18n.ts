@@ -52,6 +52,8 @@ export interface Strings {
   formulaBar: string;
   autoFitColumn: string;
   autoFitRow: string;
+  appendRow: string;
+  appendColumn: string;
 }
 
 const en: Strings = {
@@ -106,6 +108,8 @@ const en: Strings = {
   formulaBar: 'Cell contents',
   autoFitColumn: 'AutoFit column width',
   autoFitRow: 'AutoFit row height',
+  appendRow: 'Add row at bottom',
+  appendColumn: 'Add column at right',
 };
 
 const ja: Strings = {
@@ -160,6 +164,8 @@ const ja: Strings = {
   formulaBar: 'セルの内容',
   autoFitColumn: '列幅の自動調整',
   autoFitRow: '行の高さの自動調整',
+  appendRow: '末尾に行を追加',
+  appendColumn: '末尾に列を追加',
 };
 
 const locales: Record<string, Strings> = { en, ja };

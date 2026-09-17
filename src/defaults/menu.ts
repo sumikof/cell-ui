@@ -13,7 +13,9 @@ export function installDefaultContextMenu(sheet: Spreadsheet): void {
   menu.add({ id: 'insertColumns', order: 11, label: t.insertColumnsLeft, command: 'columns.insert', isVisible: (s) => s.selection.mode !== 'rows' });
   menu.add({ id: 'deleteRows', order: 12, label: t.deleteRows, command: 'rows.delete', isVisible: (s) => s.selection.mode !== 'columns' });
   menu.add({ id: 'deleteColumns', order: 13, label: t.deleteColumns, command: 'columns.delete', isVisible: (s) => s.selection.mode !== 'rows' });
-  menu.add({ id: 'sep2', order: 14, separator: true });
+  menu.add({ id: 'appendRow', order: 14, label: t.appendRow, command: 'rows.append' });
+  menu.add({ id: 'appendColumn', order: 15, label: t.appendColumn, command: 'columns.append' });
+  menu.add({ id: 'sep2', order: 16, separator: true });
   menu.add({ id: 'hideRows', order: 20, label: t.hideRows, command: 'rows.hide', isVisible: (s) => s.selection.mode === 'rows' });
   menu.add({ id: 'unhideRows', order: 21, label: t.unhideRows, command: 'rows.unhide', isVisible: (s) => s.selection.mode === 'rows' });
   menu.add({ id: 'autoFitRows', order: 22, label: t.autoFitRow, command: 'rows.autoFit', isVisible: (s) => s.selection.mode === 'rows' });

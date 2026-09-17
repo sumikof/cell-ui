@@ -117,6 +117,7 @@ export class GridView {
   // ---------------------------------------------------------------------------
 
   mount(): void {
+    this.applyFit();
     if (typeof ResizeObserver !== 'undefined') {
       this.resizeObserver = new ResizeObserver(() => this.scheduleRender());
       this.resizeObserver.observe(this.viewport);
@@ -281,8 +282,23 @@ export class GridView {
   // Rendering
   // ---------------------------------------------------------------------------
 
+  /** In `fitContent` mode, size the grid (and the component) to the sheet's rows/columns. */
+  private applyFit(): void {
+    const fit = this.sheet.options.fitContent;
+    const rootEl = this.sheet.root;
+    const fitH = fit === true || fit === 'height';
+    const fitW = fit === true || fit === 'width';
+    rootEl.classList.toggle('cui-root--fit-height', fitH);
+    rootEl.classList.toggle('cui-root--fit-width', fitW);
+    // 3px of slack keeps the fill handle / selection border of the last cell visible.
+    this.root.style.height = fitH ? px(COL_HEADER_HEIGHT + this.rows.total + 3) : '';
+    this.root.style.width = fitW ? px(ROW_HEADER_WIDTH + this.cols.total + 3) : '';
+    rootEl.style.width = fitW ? px(ROW_HEADER_WIDTH + this.cols.total + 3 + 2) : '';
+  }
+
   render(): void {
     const vp = this.viewport;
+    this.applyFit();
     this.canvas.style.width = px(this.cols.total);
     this.canvas.style.height = px(this.rows.total);
     const [r0, r1] = this.visibleRows;

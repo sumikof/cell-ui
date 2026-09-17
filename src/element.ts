@@ -33,7 +33,10 @@ export function injectStyles(target: Document | ShadowRoot = document): void {
  *
  * Attributes: `rows`, `cols`, `locale`, `toolbar`, `formula-bar`, `status-bar`,
  * `context-menu`, `gridlines`, `fill-handle` (boolean attributes accept
- * "false" to disable). Properties: `sheet`, `data` (get/set snapshot),
+ * "false" to disable), `fit-content` (`""`/`true`/`height`/`width` – size the
+ * element to its rows/columns instead of a fixed height), `auto-expand`
+ * (grow when Enter/Tab is pressed on the last row/column).
+ * Methods: `appendRows(n)`, `appendColumns(n)`. Properties: `sheet`, `data` (get/set snapshot),
  * `options` (extra `SpreadsheetOptions` merged at construction).
  * Events: `ready`, `change`, `selectionchange`, `editcommit`, `paste`, `copy`.
  * Because `ready` may fire while the page is still parsing, prefer
@@ -60,17 +63,37 @@ export class CellUiElement extends HTMLElement {
     const shadow = this.attachShadow({ mode: 'open' });
     injectStyles(shadow);
     const hostStyle = document.createElement('style');
-    hostStyle.textContent = ':host{display:block;height:400px;contain:content}:host([hidden]){display:none}.cui-host{width:100%;height:100%}';
+    hostStyle.textContent =
+      ':host{display:block;height:400px;contain:content}:host([hidden]){display:none}.cui-host{width:100%;height:100%}' +
+      ':host([fit-content=""]),:host([fit-content=true]),:host([fit-content=height]){height:auto}' +
+      ':host([fit-content=""]),:host([fit-content=true]),:host([fit-content=width]){width:max-content;max-width:100%}';
     shadow.appendChild(hostStyle);
     this.container = document.createElement('div');
     this.container.className = 'cui-host';
     shadow.appendChild(this.container);
   }
 
+  /** Append rows at the bottom. */
+  appendRows(count = 1): void {
+    this.sheet?.appendRows(count);
+  }
+
+  /** Append columns at the right. */
+  appendColumns(count = 1): void {
+    this.sheet?.appendColumns(count);
+  }
+
   private bool(name: string, fallback = true): boolean {
     const v = this.getAttribute(name);
     if (v === null) return fallback;
     return !(v === 'false' || v === '0' || v === 'off');
+  }
+
+  private fitAttr(): SpreadsheetOptions['fitContent'] {
+    const v = this.getAttribute('fit-content');
+    if (v === null || v === 'false') return false;
+    if (v === 'height' || v === 'width') return v;
+    return true;
   }
 
   private num(name: string): number | undefined {
@@ -92,6 +115,8 @@ export class CellUiElement extends HTMLElement {
       contextMenu: this.bool('context-menu'),
       showGridlines: this.bool('gridlines'),
       fillHandle: this.bool('fill-handle'),
+      fitContent: this.fitAttr(),
+      autoExpand: this.bool('auto-expand', false),
       ...this.options,
       data: this.pendingData ?? this.options.data,
     });

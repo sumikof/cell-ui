@@ -11,7 +11,7 @@
     /* ホスト側の乱暴な CSS。Shadow DOM 版には影響しない */
     td, div.cui-cell-text { color: red; }
     #plain { height: 260px; margin-bottom: 24px; }
-    cell-ui-sheet { height: 260px; }
+    #wc { height: 260px; }
   </style>
 </head>
 <body>
@@ -21,7 +21,19 @@
   <h2>B. Web Component(<code>&lt;cell-ui-sheet&gt;</code>、Shadow DOM で CSS 分離)</h2>
   <cell-ui-sheet id="wc" rows="100" cols="20" locale="ja" status-bar="false"></cell-ui-sheet>
 
+  <h2>C. 10 行 × 5 列の固定サイズ表(<code>fit-content</code> + <code>auto-expand</code>)</h2>
+  <p>
+    <button id="addRow">行を追加</button>
+    <button id="addCol">列を追加</button>
+    最終行で Enter / 最終列で Tab を押しても自動で増えます
+  </p>
+  <cell-ui-sheet id="small" rows="10" cols="5" locale="ja" fit-content auto-expand toolbar="false" status-bar="false"></cell-ui-sheet>
+
   <script>
+    const small = document.getElementById('small');
+    document.getElementById('addRow').addEventListener('click', () => small.appendRows(1));
+    document.getElementById('addCol').addEventListener('click', () => small.appendColumns(1));
+
     const plain = new CellUI.Spreadsheet(document.getElementById('plain'), { rows: 50, cols: 15, locale: 'ja' });
     plain.model.setValue(0, 0, 'script タグから');
 

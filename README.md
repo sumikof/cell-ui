@@ -36,7 +36,20 @@ const snapshot = sheet.toJSON(); // 保存
 sheet.load(snapshot);            // 復元
 ```
 
-コンテナは高さを持つ要素にしてください(`.cui-root` は `height: 100%` で親を埋めます)。
+コンテナは高さを持つ要素にしてください(`.cui-root` は `height: 100%` で親を埋めます)。`fitContent: true` を指定した場合は逆に、行数・列数からコンポーネントの大きさが決まるので親の高さは不要です。
+
+### 小さな固定サイズの表(例: 10 行 × 5 列)と行・列の追加
+
+```ts
+const sheet = new Spreadsheet(container, { rows: 10, cols: 5, fitContent: true, autoExpand: true });
+sheet.appendRows(1);        // 末尾に 1 行追加(sheet.model.appendRows でも可)
+sheet.appendColumns(2);     // 末尾に 2 列追加
+sheet.model.insertRows(3, 1);   // 4 行目の位置に挿入
+sheet.model.deleteColumns(0, 1);
+sheet.model.resize(20, 8);      // 行数・列数を直接変更(はみ出したセルは削除)
+```
+
+右クリックメニューの「行の挿入 / 列の挿入 / 末尾に行を追加 / 末尾に列を追加 / 行の削除 / 列の削除」、ショートカット Ctrl++ / Ctrl+- でも操作できます。Excel からより大きな範囲を貼り付けた場合も、必要な分だけ自動的に広がります。Web Component では `<cell-ui-sheet rows="10" cols="5" fit-content auto-expand>` と `el.appendRows(n)` / `el.appendColumns(n)` が対応します。
 
 ### オプション
 
@@ -48,6 +61,8 @@ sheet.load(snapshot);            // 復元
 | `toolbar` / `formulaBar` / `statusBar` / `contextMenu` | true | UI の表示 |
 | `showGridlines` / `fillHandle` | true | 枠線とフィルハンドル |
 | `locale` | ブラウザ言語 | `'ja'` / `'en'`(`registerLocale` で追加可能) |
+| `fitContent` | false | `true` / `'height'` / `'width'`: 行数・列数に合わせてコンポーネント自体のサイズを決める(10行5列のような小さな固定表向け。行・列を追加すると自動で広がる) |
+| `autoExpand` | false | `true` または `{ rows, cols }`: 最終行で Enter/↓、最終列で Tab/→ を押すと自動で行・列を追加 |
 | `data` | – | 初期スナップショット |
 | `plugins` | – | `SpreadsheetPlugin[]` |
 | `defaults.keymap / toolbar / contextMenu` | true | 既定のキー割り当て・ツールバー・メニューを無効化して独自定義する |

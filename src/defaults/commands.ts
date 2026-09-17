@@ -298,6 +298,8 @@ export function installDefaultCommands(commands: CommandRegistry<Spreadsheet>): 
     sheet.model.deleteColumns(r.start.col, rangeSize(r).cols);
     sheet.selection.revalidate();
   });
+  reg('rows.append', (sheet, count?: number) => sheet.appendRows(typeof count === 'number' ? count : 1));
+  reg('columns.append', (sheet, count?: number) => sheet.appendColumns(typeof count === 'number' ? count : 1));
   reg('structure.insert', (sheet) => {
     if (sheet.selection.mode === 'columns') commands.execute('columns.insert');
     else commands.execute('rows.insert');

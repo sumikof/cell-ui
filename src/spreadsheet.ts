@@ -35,6 +35,19 @@ export interface SpreadsheetOptions extends SheetModelOptions {
   fillHandle?: boolean;
   /** Apply column widths that come with pasted HTML tables when pasting into a single cell (default false). */
   pasteColumnWidths?: boolean;
+  /**
+   * Size the component to its rows/columns instead of filling the container:
+   * `true` fits both width and height, `'height'` / `'width'` fit one axis.
+   * Useful for small fixed tables such as 10 rows × 5 columns; the component
+   * grows as rows/columns are appended.
+   */
+  fitContent?: boolean | 'height' | 'width';
+  /**
+   * Automatically append a row when Enter / ArrowDown is pressed on the last
+   * row, and a column when Tab / ArrowRight is pressed on the last column.
+   * `true` enables both; an object enables each axis separately.
+   */
+  autoExpand?: boolean | { rows?: boolean; cols?: boolean };
   /** UI language, e.g. "ja" or "en". Defaults to the browser language. */
   locale?: string;
   /** Initial content. */
@@ -409,10 +422,44 @@ export class Spreadsheet {
     this.grid.scrollIntoView(extend ? address : this.selection.active);
   }
 
+  /** Append rows at the bottom (keeps the selection, re-renders). */
+  appendRows(count = 1): void {
+    if (count <= 0) return;
+    this.model.appendRows(count);
+  }
+
+  /** Append columns at the right. */
+  appendColumns(count = 1): void {
+    if (count <= 0) return;
+    this.model.appendColumns(count);
+  }
+
+  private autoExpandEnabled(axis: 'rows' | 'cols'): boolean {
+    const o = this.options.autoExpand;
+    if (!o) return false;
+    if (o === true) return true;
+    return !!o[axis];
+  }
+
+  /** Grow the sheet when moving past its last row/column and `autoExpand` allows it. Returns true when it grew. */
+  private maybeExpandFor(from: CellAddress, dRow: number, dCol: number): boolean {
+    let grew = false;
+    if (dRow > 0 && from.row === this.model.rowCount - 1 && this.autoExpandEnabled('rows')) {
+      this.model.appendRows(1);
+      grew = true;
+    }
+    if (dCol > 0 && from.col === this.model.colCount - 1 && this.autoExpandEnabled('cols')) {
+      this.model.appendColumns(1);
+      grew = true;
+    }
+    return grew;
+  }
+
   /** Move the active cell (or extend the selection). `jump` implements Ctrl+Arrow. */
   moveActive(dRow: number, dCol: number, options: { extend?: boolean; jump?: boolean }): void {
     if (this.isEditing && !this.commitEdit()) return;
     const sel = this.selection;
+    if (!options.extend && !options.jump) this.maybeExpandFor(sel.active, dRow, dCol);
     const rows = this.model.rowCount;
     const cols = this.model.colCount;
     if (options.extend) {
@@ -510,6 +557,7 @@ export class Spreadsheet {
       return;
     }
     if (this.tabStartCol === null) this.tabStartCol = sel.active.col;
+    this.maybeExpandFor(sel.active, 0, direction);
     const next = this.stepVisible(sel.active, 0, direction);
     sel.setActive(next);
     this.grid.scrollIntoView(sel.active);
@@ -525,6 +573,7 @@ export class Spreadsheet {
       return;
     }
     const col = this.tabStartCol !== null && direction === 1 ? this.tabStartCol : sel.active.col;
+    this.maybeExpandFor(sel.active, direction, 0);
     const next = this.stepVisible({ row: sel.active.row, col }, direction, 0);
     sel.setActive(next);
     this.tabStartCol = null;
