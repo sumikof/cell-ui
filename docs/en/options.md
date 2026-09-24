@@ -34,7 +34,7 @@ This is a mapping table between `options` (`SpreadsheetOptions`) of `new Spreads
 | `showGridlines` | `gridlines` | true | Gridlines |
 | `fillHandle` | `fill-handle` | true | Fill handle at the bottom-right of the selection |
 
-These can be toggled after construction with `sheet.setVisible(part, visible)` ([API](./api.md#visibility)).
+These can be toggled after construction with `sheet.setVisible(part, visible)` ([API](./api.md#layout-and-visibility)).
 
 ## Behavior
 
