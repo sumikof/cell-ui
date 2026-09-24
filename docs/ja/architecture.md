@@ -16,6 +16,7 @@ src/
   i18n.ts         UI 文言(ja / en)
   styles.css      スタイル
 examples/         デモ(demo.ts)と数式プラグインのサンプル
+docs/             ドキュメント(en / ja)
 test/             vitest ユニットテスト
 scripts/e2e.mjs   Chromium での動作確認
 index.html        デモページ

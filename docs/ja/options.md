@@ -34,7 +34,7 @@
 | `showGridlines` | `gridlines` | true | 枠線 |
 | `fillHandle` | `fill-handle` | true | 選択範囲右下のフィルハンドル |
 
-これらは構築後に `sheet.setVisible(part, visible)` で切り替えられます([API](./api.md#表示切り替え))。
+これらは構築後に `sheet.setVisible(part, visible)` で切り替えられます([API](./api.md#レイアウトと表示))。
 
 ## 動作
 
