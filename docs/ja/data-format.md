@@ -35,7 +35,7 @@
 ```ts
 interface CellData {
   value: string | number | boolean | null;
-  style?: CellStyle;                 // 書式(docs/styling.md)
+  style?: CellStyle;                 // 書式(docs/ja/styling.md)
   meta?: Record<string, unknown>;    // 拡張用の任意データ
 }
 ```

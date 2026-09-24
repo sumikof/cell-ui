@@ -1,93 +1,81 @@
 # cell-ui
 
-Web ブラウザで動く、Excel ライクなセル UI ライブラリです。フレームワーク非依存(TypeScript / DOM のみ)で、関数(数式)機能は持ちませんが、プラグインで拡張できる設計になっています。
+An Excel-like spreadsheet UI library for the browser. It is framework-free (TypeScript + DOM only) and has no formula engine in the core, but is designed to be extended with plugins.
 
-- **Microsoft Excel との相互コピー&ペースト** — 値だけでなく、太字・斜体・色・塗りつぶし・配置・罫線・フォントなどの書式も往復します(`text/html` + `text/plain` の Excel 互換フォーマット)。
-- **Excel と同じショートカットキー** — 矢印 / Ctrl+矢印 / Shift+矢印 / Tab / Enter / F2 / Delete / Ctrl+C,X,V / Ctrl+Z,Y / Ctrl+B,I,U / Ctrl+D,R / Ctrl+Space / Shift+Space / Ctrl+A / Ctrl+1 / Ctrl+9,0 / Alt+Enter … 。
-- **スタイル選択ツールバー** — フォント、サイズ、太字・斜体・下線・取り消し線、文字色、塗りつぶし、上下左右の配置、折り返し、罫線プリセット、書式クリア。
-- **セル UI に特化** — 仮想スクロール、列幅・行高のドラッグ変更とダブルクリック自動調整、フィルハンドル(連続データ)、行・列の挿入/削除/非表示、右クリックメニュー、名前ボックス+数式バー、ステータスバー(平均/個数/合計)、Undo/Redo。
-- **拡張可能** — コマンドレジストリ、キーマップ、ツールバー、コンテキストメニュー、値パーサ、表示リゾルバ、セルレンダラ、セルごとの `meta` によって、数式エンジンや入力規則などを後から載せられます(`examples/formula-plugin.ts` に =SUM 等のサンプル)。
+- **Copy & paste to/from Microsoft Excel** — not just values but also formatting round-trips: bold, italic, colours, fill, alignment, borders, fonts (Excel-compatible `text/html` + `text/plain`).
+- **Excel keyboard shortcuts** — Arrows / Ctrl+Arrows / Shift+Arrows / Tab / Enter / F2 / Delete / Ctrl+C,X,V / Ctrl+Z,Y / Ctrl+B,I,U / Ctrl+D,R / Ctrl+Space / Shift+Space / Ctrl+A / Ctrl+1 / Ctrl+9,0 / Alt+Enter …
+- **Styling toolbar** — font, size, bold / italic / underline / strikethrough, text colour, fill colour, horizontal and vertical alignment, wrap, border presets, clear formatting.
+- **Built for cell UIs** — virtual scrolling, drag-to-resize and double-click auto-fit for columns and rows, fill handle (series), row/column insert / delete / hide, context menu, name box + formula bar, status bar (average / count / sum), undo / redo.
+- **Data validation** — number-only and list-selection rules with an in-cell dropdown.
+- **Extensible** — command registry, keymap, toolbar, context menu, value parsers, display resolvers, cell renderers and per-cell `meta` let you add a formula engine, validation rules and more later (see `examples/formula-plugin.ts` for a =SUM sample).
+- **Embeddable three ways** — ES module for bundlers, a single-file IIFE build for `<script>` tags (global `CellUI`), and a `<cell-ui-sheet>` custom element with Shadow-DOM-isolated styles. See `embed.html`.
 
-## ドキュメント
+## Documentation
 
-詳細は [docs/](./docs/README.md) を参照してください。
+Documentation is available in English and Japanese:
 
-| ドキュメント | 内容 |
+- English: [docs/en/](./docs/en/README.md)
+- 日本語: [docs/ja/](./docs/ja/README.md)
+
+| Document | Contents |
 | --- | --- |
-| [はじめに](./docs/getting-started.md) | インストール、最小構成、開発コマンド |
-| [オプション一覧](./docs/options.md) | コンストラクタ / Web Component 属性 |
-| [埋め込みガイド](./docs/embedding.md) | `<script>` タグ、Web Component、React / Vue、iframe |
-| [レイアウトと UI 部品](./docs/layout.md) | 固定サイズ表、行・列の追加、ヘッダー / バーの表示切り替え、列名 |
-| [ショートカットキー](./docs/keyboard-shortcuts.md) | Excel 互換のキー一覧 |
-| [クリップボード](./docs/clipboard.md) | Excel との相互コピペ |
-| [スタイル](./docs/styling.md) | 書式、罫線、ツールバー、テーマ |
-| [入力規則](./docs/validation.md) | 数値のみ / リスト選択 |
-| [拡張](./docs/extensibility.md) | プラグイン API |
-| [API リファレンス](./docs/api.md) | クラスとメソッド |
-| [データ形式](./docs/data-format.md) | スナップショット JSON |
-| [アーキテクチャ](./docs/architecture.md) | 内部設計 |
-| [開発ガイド](./docs/development.md) | ビルド、テスト、CI |
+| [Getting started](./docs/en/getting-started.md) | Installation, minimal setup, dev commands |
+| [Options](./docs/en/options.md) | Constructor options / Web Component attributes |
+| [Embedding guide](./docs/en/embedding.md) | `<script>` tag, Web Component, React / Vue, iframe |
+| [Layout and UI parts](./docs/en/layout.md) | Fixed-size tables, adding rows/columns, showing/hiding headers and bars, column labels |
+| [Keyboard shortcuts](./docs/en/keyboard-shortcuts.md) | Excel-compatible key list |
+| [Clipboard](./docs/en/clipboard.md) | Copy & paste with Excel |
+| [Styling](./docs/en/styling.md) | Formatting, borders, toolbar, theme |
+| [Validation](./docs/en/validation.md) | Number-only / list selection |
+| [Extensibility](./docs/en/extensibility.md) | Plugin API |
+| [API reference](./docs/en/api.md) | Classes and methods |
+| [Data format](./docs/en/data-format.md) | Snapshot JSON |
+| [Architecture](./docs/en/architecture.md) | Internal design |
+| [Development guide](./docs/en/development.md) | Build, test, CI |
 
-## 使い方
+## Usage
 
 ```bash
 npm install
-npm run dev      # デモ (http://localhost:5173) / 埋め込みサンプル (/embed.html)
-npm test         # ユニットテスト
-npm run e2e      # Chromium での動作確認
-npm run build    # dist/ にビルド
+npm run dev      # Demo (http://localhost:5173) / embedding samples (/embed.html)
+npm test         # Unit tests
+npm run e2e      # Browser checks in Chromium
+npm run build    # Build into dist/
 ```
 
 ```ts
 import { Spreadsheet } from 'cell-ui';
 import 'cell-ui/style.css';
 
-const sheet = new Spreadsheet(document.getElementById('app')!, { rows: 1000, cols: 52, locale: 'ja' });
+const sheet = new Spreadsheet(document.getElementById('app')!, { rows: 1000, cols: 52, locale: 'en' });
 sheet.model.setValue(0, 0, 'Hello');
 sheet.model.setCell(0, 1, { value: 42, style: { bold: true, color: '#c00000' } });
 const snapshot = sheet.toJSON();
 ```
 
 ```html
-<!-- ビルド不要の埋め込み(Web Component) -->
+<!-- Embedding without a build step (Web Component) -->
 <link rel="stylesheet" href="cell-ui.css"><script src="cell-ui.iife.js"></script>
-<cell-ui-sheet rows="10" cols="5" fit-content column-labels="品名,数量,単価,備考"></cell-ui-sheet>
+<cell-ui-sheet rows="10" cols="5" fit-content column-labels="Item,Qty,Price,Notes"></cell-ui-sheet>
 ```
 
-## 構成
+## Project layout
 
 ```
 src/
-  model/       型・A1 アドレス・スパースなシートモデル(トランザクション / Undo / Redo)・入力規則
-  clipboard/   Excel 互換 TSV / HTML のシリアライズとパース
-  keyboard/    キーコンボの解釈とキーマップ
-  render/      仮想スクロール描画
-  ui/          ツールバー・カラーピッカー・コンテキストメニュー・数式バー・ステータスバー・ドロップダウン
-  defaults/    既定のコマンド・キー割り当て・ツールバー・メニュー
-  plugins/     拡張 API の型定義
-  spreadsheet.ts  すべてを束ねるコンポーネント
+  model/       Types, A1 addresses, sparse sheet model (transactions / undo / redo), validation
+  clipboard/   Excel-compatible TSV / HTML serialisation and parsing
+  keyboard/    Key combo parsing and keymap
+  render/      Virtual-scrolling renderer
+  ui/          Toolbar, colour picker, context menu, formula bar, status bar, dropdown
+  defaults/    Default commands, key bindings, toolbar and menus
+  plugins/     Extension API type definitions
+  spreadsheet.ts  The component that ties everything together
   element.ts   Web Component <cell-ui-sheet>
-examples/      デモと数式プラグインのサンプル
-docs/          ドキュメント
-test/          vitest ユニットテスト
-scripts/e2e.mjs  Chromium での動作確認
-```
-
----
-
-## English
-
-Excel-like spreadsheet UI for the browser. Framework-free TypeScript. No formula engine in the core, but everything (commands, key bindings, toolbar, context menu, value parsing, display, rendering, per-cell `meta`, validation rules) is pluggable. See [docs/](./docs/README.md) (Japanese).
-
-- Copy & paste to/from Microsoft Excel with formatting (Excel-compatible `text/html` + TSV `text/plain`).
-- Excel keyboard shortcuts (navigation, editing, clipboard, formatting, fill, structure).
-- Styling toolbar: font, size, bold/italic/underline/strikethrough, text & fill colour, alignment, wrap, borders.
-- Data validation: number-only and list-selection rules with an in-cell dropdown.
-- Virtualised grid, resizable rows/columns, fill handle, row/column insert/delete/hide/append, fixed-size tables (`fitContent`, `autoExpand`, custom column labels), hideable headers/bars, context menu, name box + formula bar, status bar, undo/redo.
-- Embeddable three ways: ES module for bundlers, a single-file IIFE build for `<script>` tags (global `CellUI`), and a `<cell-ui-sheet>` custom element with Shadow-DOM-isolated styles. See `embed.html`.
-
-```ts
-import { Spreadsheet } from 'cell-ui';
-import 'cell-ui/style.css';
-const sheet = new Spreadsheet(document.getElementById('app')!, { locale: 'en' });
+examples/      Demo and formula plugin sample
+docs/
+  en/          Documentation (English)
+  ja/          Documentation (Japanese)
+test/          vitest unit tests
+scripts/e2e.mjs  Browser checks in Chromium
 ```

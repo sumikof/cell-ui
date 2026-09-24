@@ -67,7 +67,7 @@ Chromium のパスは `/opt/pw-browsers/chromium` を想定しています。別
 2. `Spreadsheet` に公開 API を追加し、必要なら `SpreadsheetOptions` と `setVisible` を拡張する。
 3. コマンドを `defaults/commands.ts` に、キーを `defaults/keymap.ts` に、メニュー / ツールバー項目を `defaults/menu.ts` / `defaults/toolbar.ts` に登録する。
 4. Web Component で扱う場合は `element.ts` の属性・`observedAttributes` を更新する。
-5. ユニットテストとブラウザ検証を追加し、`docs/` を更新する。
+5. ユニットテストとブラウザ検証を追加し、`docs/ja/` と `docs/en/` の両方を更新する。
 
 ## リリース
 

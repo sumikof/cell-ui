@@ -1,5 +1,7 @@
 # cell-ui ドキュメント
 
+English version: [docs/en](../en/README.md)
+
 Web ブラウザで動く Excel ライクなセル UI ライブラリ **cell-ui** のドキュメントです。フレームワーク非依存の TypeScript で書かれ、Excel との書式付きコピー&ペースト、Excel と同じショートカット、スタイル編集、入力規則を備え、関数などの機能はプラグインで後付けできる設計になっています。
 
 ## 目次
